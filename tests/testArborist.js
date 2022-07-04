@@ -1,5 +1,5 @@
 const assert = require('assert');
-const {generateFlatAST, generateCode, Arborist} = require(__dirname + '/../index');
+const {generateFlatAST, generateCode, Arborist} = require(__dirname + '/../src/index');
 
 /**
  * Verify node replacement works as expected.

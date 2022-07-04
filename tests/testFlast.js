@@ -1,5 +1,5 @@
 const assert = require('assert');
-const {generateFlatAST, generateCode} = require(__dirname + '/../index');
+const {generateFlatAST, generateCode} = require(__dirname + '/../src/index');
 
 /**
  * Verify the code breakdown generates the expected nodes by checking the number of nodes for each expected type.
