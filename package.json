@@ -1,0 +1,35 @@
+{
+  "name": "flast",
+  "version": "1.0.0",
+  "description": "Flatten JS AST",
+  "main": "index.js",
+  "scripts": {
+    "prepare": "husky install",
+    "test": "node tests/allTester.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PerimeterX/flAST.git"
+  },
+  "keywords": [
+    "JS",
+    "javascript",
+    "AST"
+  ],
+  "author": "ben.baryo@perimeterx.com",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/PerimeterX/flAST/issues"
+  },
+  "homepage": "https://github.com/PerimeterX/flAST#readme",
+  "dependencies": {
+    "escodegen": "^2.0.0",
+    "espree": "^9.0.0",
+    "estraverse": "^5.3.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.19.0",
+    "eslint-scope": "^6.0.0",
+    "husky": "^8.0.1"
+  }
+}
