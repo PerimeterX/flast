@@ -8,6 +8,9 @@ Flatten an Abstract Syntax Tree by placing all of the nodes in a single flat arr
 - Adds a unique id to each node to simplify tracking and understanding relations between nodes.
 - <u>Arborist</u> - marks nodes for replacement or deletion and applies all changes in a single iteration over the tree.
 
+## Installation
+`npm install flast`
+
 ### Expected Data Structure
 <details>
 	<summary>Example of how a flat AST would look like.</summary>
@@ -128,6 +131,7 @@ const tree = [
 
 ## Usage
 ### flAST
+
 ```javascript
 const {generateFlatAST, generateCode} = require('flast');
 const ast = generateFlatAST(`console.log('flAST'`);
@@ -159,19 +163,20 @@ const generateCodeDefaultOptions = {
 ```
 
 ### Arborist
+
 ```javascript
 const {generateFlatAST, generateCode, Arborist} = require('flast');
 const ast = generateFlatAST(`console.log('Hello' + ' ' + 'there!');`);
 const replacements = {
-	'Hello': 'General',
-	'there!': 'Kenobi',
+  'Hello': 'General',
+  'there!': 'Kenobi',
 };
 const arborist = new Arborist(ast);
 // Mark all relevant nodes for replacement.
 ast.filter(n => n.type === 'Literal' && replacements[n.value]).forEach(n => arborist.markNode(n, {
-	type: 'Literal',
-	value: replacements[n.value],
-	raw: `'${replacements[n.value]}'`,
+  type: 'Literal',
+  value: replacements[n.value],
+  raw: `'${replacements[n.value]}'`,
 }));
 const numberOfChangesMade = arborist.applyChanges();
 console.log(generateCode(arborist.ast[0]));  // console.log('General' + ' ' + 'Kenobi');
