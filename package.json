@@ -25,11 +25,11 @@
   "dependencies": {
     "escodegen": "^2.0.0",
     "espree": "^9.0.0",
+    "eslint-scope": "^6.0.0",
     "estraverse": "^5.3.0"
   },
   "devDependencies": {
     "eslint": "^8.19.0",
-    "eslint-scope": "^6.0.0",
     "husky": "^8.0.1"
   }
 }
