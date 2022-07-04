@@ -9,19 +9,19 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/PerimeterX/flAST.git"
+    "url": "git+https://github.com/PerimeterX/flast.git"
   },
   "keywords": [
-    "JS",
+    "js",
     "javascript",
     "AST"
   ],
   "author": "ben.baryo@perimeterx.com",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/PerimeterX/flAST/issues"
+    "url": "https://github.com/PerimeterX/flast/issues"
   },
-  "homepage": "https://github.com/PerimeterX/flAST#readme",
+  "homepage": "https://github.com/PerimeterX/flast#readme",
   "dependencies": {
     "escodegen": "^2.0.0",
     "espree": "^9.0.0",
