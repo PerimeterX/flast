@@ -41,6 +41,9 @@ const Arborist = class {
 	 * @param replacementNode If exists, replace the target node with this node.
 	 */
 	markNode(targetNode, replacementNode) {
+
+		throw new Error('oi vey');
+
 		if (!targetNode.markedNode) {
 			if (replacementNode) {  // Mark for replacement
 				this.markedForReplacement[targetNode.nodeId] = replacementNode;
