@@ -37,9 +37,29 @@ function testParseAndGenerate() {
 		`Original code did not regenerate back to the same source.\nOriginal:\t${code}\nRegenerated:\t${regeneratedCode}`);
 }
 
+function testFlastOptionsDetailed() {
+	const code = `var a = [1]; a[0];`;
+	const noDetailsAst = generateFlatAST(code, {detailed: false, includeSrc: true}); // includeSrc will be ignored
+	const [noDetailsVarDec, noDetailsVarRef] = noDetailsAst.filter(n => n.type === 'Identifier');
+	assert(!(
+		noDetailsVarDec.parentNode || noDetailsVarDec.childNodes || noDetailsVarDec.references ||
+			noDetailsVarRef.declNode || noDetailsVarRef.nodeId || noDetailsVarRef.scope || noDetailsVarRef.src),
+	`Flat AST generated with details despite 'detailed' option set to false.`);
+	const detailedAst = generateFlatAST(code, {detailed: true});
+	const [detailedVarDec, detailedVarRef] = detailedAst.filter(n => n.type === 'Identifier');
+	assert(
+		detailedVarDec.parentNode && detailedVarDec.childNodes && detailedVarDec.references &&
+		detailedVarRef.declNode && detailedVarRef.nodeId && detailedVarRef.scope && detailedVarRef.src,
+		`Flat AST missing details despite 'detailed' option set to true.`);
+	const detailedNoSrcAst = generateFlatAST(code, {detailed: true, includeSrc: false});
+	assert(!detailedNoSrcAst[0].src,
+		`Flat AST includes details despite 'detailed' option set to true and 'includeSrc' option set to false.`);
+}
+
 const tests = {
 	'number of nodes': testNumberOfNodes,
 	'parse and generate': testParseAndGenerate,
+	'options: detailed': testFlastOptionsDetailed,
 };
 
 module.exports = tests;
