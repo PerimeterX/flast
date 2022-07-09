@@ -27,20 +27,20 @@ const generateFlatASTDefaultOptions = {
  * @return {ASTNode[]} An array of flattened AST
  */
 function generateFlatAST(inputCode, opts = {}) {
-	opts = Object.assign(Object.assign({}, generateFlatASTDefaultOptions), opts);
+	opts = { ...generateFlatASTDefaultOptions, ...opts };
 	const rootNode = parseCode(inputCode);
 	let scopeManager;
 	try {
 		if (opts.detailed) { // noinspection JSCheckFunctionSignatures
 			scopeManager = eslineScope.analyze(rootNode, {optimistic: true, ecmaVersion});
 		}
-	} catch (e) {}
+	} catch {}
 	const tree = [];
 	let nodeId = 0;
 	let scopeId = 0;
 	let currentScope;
 	if (opts.detailed) { // noinspection JSCheckFunctionSignatures
-		currentScope = scopeManager ? scopeManager.acquire(rootNode) : {};
+		currentScope = scopeManager?.acquire(rootNode) ?? {};
 	}
 	estraverse.traverse(rootNode, {
 		enter(node, parentNode) {
@@ -96,8 +96,7 @@ const generateCodeDefaultOptions = {
  * @return {string} Code generated from AST
  */
 function generateCode(rootNode, opts = {}) {
-	opts = Object.assign(Object.assign({}, generateCodeDefaultOptions), opts);
-	return generate(rootNode, opts);
+	return generate(rootNode, { ...generateCodeDefaultOptions, ...opts });
 }
 
 module.exports = {
