@@ -27,7 +27,7 @@ const generateFlatASTDefaultOptions = {
  * @return {ASTNode[]} An array of flattened AST
  */
 function generateFlatAST(inputCode, opts = {}) {
-	opts = { ...generateFlatASTDefaultOptions, opts };
+	opts = { ...generateFlatASTDefaultOptions, ...opts };
 	const rootNode = parseCode(inputCode);
 	let scopeManager;
 	try {
