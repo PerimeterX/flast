@@ -21,11 +21,13 @@ const ecmaVersion = 'latest';
 const ASTNode = espreeASTNode;
 
 /**
- * @param inputCode
+ * @param {string} inputCode
+ * @param {object} opts Additional options for espree
  * @return {ASTNode} The root of the AST
  */
-function parseCode(inputCode) {
-	return parse(inputCode, {ecmaVersion, comment: true, range: true});
+function parseCode(inputCode, opts = {}) {
+	// noinspection JSValidateTypes
+	return parse(inputCode, {ecmaVersion, comment: true, range: true, ...opts});
 }
 
 /**
@@ -46,6 +48,9 @@ function getParentKey(parent, targetChildNodeId) {
 const generateFlatASTDefaultOptions = {
 	detailed: true,   // If false, include only original node without any further details
 	includeSrc: true, // If false, do not include node src. Only available when `detailed` option is true
+	parseOpts: {      // Options for the espree parser
+		sourceType: 'module',
+	},
 };
 
 /**
@@ -55,11 +60,12 @@ const generateFlatASTDefaultOptions = {
  */
 function generateFlatAST(inputCode, opts = {}) {
 	opts = { ...generateFlatASTDefaultOptions, ...opts };
-	const rootNode = parseCode(inputCode);
+	const parseOpts = opts.parseOpts || {};
+	const rootNode = parseCode(inputCode, parseOpts);
 	let scopeManager;
 	try {
 		if (opts.detailed) { // noinspection JSCheckFunctionSignatures
-			scopeManager = eslineScope.analyze(rootNode, {optimistic: true, ecmaVersion});
+			scopeManager = analyze(rootNode, {optimistic: true, ecmaVersion});
 		}
 	} catch {}
 	const tree = [];
