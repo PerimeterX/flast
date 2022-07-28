@@ -186,3 +186,9 @@ inside the arborist.
 
 ## Contribution
 To contribute to this project see our [contribution guide](CONTRIBUTING.md)
+
+## Changes
+### v1.1.0
+ - Added parentKey property.
+ - Improved ASTNode definition (useful for intellisense).
+ - Ability to pass options directly to the epress parser.
