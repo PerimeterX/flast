@@ -16,6 +16,21 @@ function parseCode(inputCode) {
 	return parse(inputCode, {ecmaVersion, comment: true, range: true});
 }
 
+/**
+ * Return the key the child node is assigned in the parent node if applicable; null otherwise.
+ * @param {ASTNode} parent
+ * @param {number} targetChildNodeId
+ * @returns {string|null}
+ */
+function getParentKey(parent, targetChildNodeId) {
+	if (parent) {
+		for (const key of Object.keys(parent)) {
+			if (parent[key]?.nodeId === targetChildNodeId) return key;
+		}
+	}
+	return null;
+}
+
 const generateFlatASTDefaultOptions = {
 	detailed: true,   // If false, include only original node without any further details
 	includeSrc: true, // If false, do not include node src. Only available when `detailed` option is true
@@ -49,6 +64,7 @@ function generateFlatAST(inputCode, opts = {}) {
 				if (opts.includeSrc) node.src = inputCode.substring(node.range[0], node.range[1]);
 				node.childNodes = [];
 				node.parentNode = parentNode;
+				node.parentKey = getParentKey(parentNode, node.nodeId);
 				// Set new scope when entering a function structure
 				if (scopeManager && /Function/.test(node.type)) currentScope = scopeManager.acquire(node);
 				if (currentScope && currentScope.scopeId === undefined) currentScope.scopeId = scopeId++;
