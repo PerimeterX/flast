@@ -16,9 +16,9 @@ function testNumberOfNodes() {
 		BinaryExpression: 2,
 		Literal: 3,
 	};
-	const expectedNubmerOfNodes = 11;
-	assert(ast.length === expectedNubmerOfNodes,
-		`Unexpected number of nodes: Expected ${expectedNubmerOfNodes} but got ${ast.length}`);
+	const expectedNumberOfNodes = 11;
+	assert(ast.length === expectedNumberOfNodes,
+		`Unexpected number of nodes: Expected ${expectedNumberOfNodes} but got ${ast.length}`);
 	for (const nodeType of Object.keys(expectedBreakdown)) {
 		const numberOfNodes = ast.filter(n => n.type === nodeType).length;
 		assert(numberOfNodes === expectedBreakdown[nodeType],
@@ -56,10 +56,33 @@ function testFlastOptionsDetailed() {
 		`Flat AST includes details despite 'detailed' option set to true and 'includeSrc' option set to false.`);
 }
 
+/**
+ * Verify the code breakdown generates the expected nodes by checking the properties of the generated ASTNodes.
+ */
+function testNodesStructureIntegrity() {
+	const code = `a=3`;
+	const ast = generateFlatAST(code);
+	const expectedBreakdown = [
+		{nodeId: 0, type: 'Program', start: 0, end: 3, src: 'a=3', parentNode: null, parentKey: null},
+		{nodeId: 1, type: 'ExpressionStatement', start: 0, end: 3, src: 'a=3', parentKey: null},
+		{nodeId: 2, type: 'AssignmentExpression', start: 0, end: 3, src: 'a=3', operator: '=', parentKey: 'expression'},
+		{nodeId: 3, type: 'Identifier', start: 0, end: 1, src: 'a', parentKey: 'left'},
+		{nodeId: 4, type: 'Literal', start: 2, end: 3, src: '3', value: 3, raw: '3', parentKey: 'right'},
+	];
+	expectedBreakdown.forEach(node => {
+		const parsedNode = ast[node.nodeId];
+		for (const [k, v] of Object.entries(node)) {
+			assert(parsedNode[k] === v,
+				`Value in parsed node, ${parsedNode[k]}, does not match expected value: ${v}, for key ${k}`);
+		}
+	});
+}
+
 const tests = {
 	'number of nodes': testNumberOfNodes,
 	'parse and generate': testParseAndGenerate,
 	'options: detailed': testFlastOptionsDetailed,
+	'ASTNode structure integrity': testNodesStructureIntegrity,
 };
 
 module.exports = tests;
