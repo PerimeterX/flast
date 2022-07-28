@@ -1,24 +1,56 @@
 // noinspection JSUnusedGlobalSymbols
 
 // eslint-disable-next-line no-unused-vars
-const {parse, ASTNode} = require('espree');
+const {parse, ASTNode:espreeASTNode} = require('espree');
 const {generate} = require('escodegen');
 const estraverse = require('estraverse');
-const eslineScope = require('eslint-scope');
+// eslint-disable-next-line no-unused-vars
+const {analyze, ScopeManager} = require('eslint-scope');
 
-const ecmaVersion = 2022;
+const ecmaVersion = 'latest';
 
 /**
- * @param inputCode
+ * @typedef ASTNode
+ * @property {number} nodeId
+ * @property {string} src
+ * @property {array} childNodes
+ * @property {?ASTNode} parentNode
+ * @property {ScopeManager} scope
+ * @property {?string} parentKey
+ */
+const ASTNode = espreeASTNode;
+
+/**
+ * @param {string} inputCode
+ * @param {object} opts Additional options for espree
  * @return {ASTNode} The root of the AST
  */
-function parseCode(inputCode) {
-	return parse(inputCode, {ecmaVersion, comment: true, range: true});
+function parseCode(inputCode, opts = {}) {
+	// noinspection JSValidateTypes
+	return parse(inputCode, {ecmaVersion, comment: true, range: true, ...opts});
+}
+
+/**
+ * Return the key the child node is assigned in the parent node if applicable; null otherwise.
+ * @param {ASTNode} parent
+ * @param {number} targetChildNodeId
+ * @returns {string|null}
+ */
+function getParentKey(parent, targetChildNodeId) {
+	if (parent) {
+		for (const key of Object.keys(parent)) {
+			if (parent[key]?.nodeId === targetChildNodeId) return key;
+		}
+	}
+	return null;
 }
 
 const generateFlatASTDefaultOptions = {
 	detailed: true,   // If false, include only original node without any further details
 	includeSrc: true, // If false, do not include node src. Only available when `detailed` option is true
+	parseOpts: {      // Options for the espree parser
+		sourceType: 'module',
+	},
 };
 
 /**
@@ -28,11 +60,12 @@ const generateFlatASTDefaultOptions = {
  */
 function generateFlatAST(inputCode, opts = {}) {
 	opts = { ...generateFlatASTDefaultOptions, ...opts };
-	const rootNode = parseCode(inputCode);
+	const parseOpts = opts.parseOpts || {};
+	const rootNode = parseCode(inputCode, parseOpts);
 	let scopeManager;
 	try {
 		if (opts.detailed) { // noinspection JSCheckFunctionSignatures
-			scopeManager = eslineScope.analyze(rootNode, {optimistic: true, ecmaVersion});
+			scopeManager = analyze(rootNode, {optimistic: true, ecmaVersion});
 		}
 	} catch {}
 	const tree = [];
@@ -49,6 +82,7 @@ function generateFlatAST(inputCode, opts = {}) {
 				if (opts.includeSrc) node.src = inputCode.substring(node.range[0], node.range[1]);
 				node.childNodes = [];
 				node.parentNode = parentNode;
+				node.parentKey = getParentKey(parentNode, node.nodeId);
 				// Set new scope when entering a function structure
 				if (scopeManager && /Function/.test(node.type)) currentScope = scopeManager.acquire(node);
 				if (currentScope && currentScope.scopeId === undefined) currentScope.scopeId = scopeId++;
