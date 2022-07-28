@@ -134,7 +134,7 @@ const tree = [
 
 ```javascript
 const {generateFlatAST, generateCode} = require('flast');
-const ast = generateFlatAST(`console.log('flAST'`);
+const ast = generateFlatAST(`console.log('flAST')`);
 const reconstructedCode = generateCode(ast[0]); // rebuild from root node
 ```
 #### generateFlatAST Options
