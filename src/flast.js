@@ -40,6 +40,11 @@ function getParentKey(parent, targetChildNodeId) {
 	if (parent) {
 		for (const key of Object.keys(parent)) {
 			if (parent[key]?.nodeId === targetChildNodeId) return key;
+			else if (Array.isArray(parent[key])) {
+				for (const item of parent[key]) {
+					if (item.nodeId === targetChildNodeId) return key;
+				}
+			}
 		}
 	}
 	return null;

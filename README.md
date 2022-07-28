@@ -188,6 +188,8 @@ inside the arborist.
 To contribute to this project see our [contribution guide](CONTRIBUTING.md)
 
 ## Changes
+### v1.1.1
+- Improve getParentKey to include parsing the name of grouped nodes such as 'arguments' or 'body'.
 ### v1.1.0
  - Added parentKey property.
  - Improved ASTNode definition (useful for intellisense).
