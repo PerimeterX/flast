@@ -64,7 +64,7 @@ function testNodesStructureIntegrity() {
 	const ast = generateFlatAST(code);
 	const expectedBreakdown = [
 		{nodeId: 0, type: 'Program', start: 0, end: 3, src: 'a=3', parentNode: null, parentKey: null},
-		{nodeId: 1, type: 'ExpressionStatement', start: 0, end: 3, src: 'a=3', parentKey: null},
+		{nodeId: 1, type: 'ExpressionStatement', start: 0, end: 3, src: 'a=3', parentKey: 'body'},
 		{nodeId: 2, type: 'AssignmentExpression', start: 0, end: 3, src: 'a=3', operator: '=', parentKey: 'expression'},
 		{nodeId: 3, type: 'Identifier', start: 0, end: 1, src: 'a', parentKey: 'left'},
 		{nodeId: 4, type: 'Literal', start: 2, end: 3, src: '3', value: 3, raw: '3', parentKey: 'right'},
