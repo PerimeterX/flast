@@ -42,6 +42,7 @@ function getParentKey(parent, targetChildNodeId) {
 			if (parent[key]?.nodeId === targetChildNodeId) return key;
 			else if (Array.isArray(parent[key])) {
 				for (const item of parent[key]) {
+					if (!item) continue;
 					if (item.nodeId === targetChildNodeId) return key;
 				}
 			}
