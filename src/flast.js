@@ -42,8 +42,7 @@ function getParentKey(parent, targetChildNodeId) {
 			if (parent[key]?.nodeId === targetChildNodeId) return key;
 			else if (Array.isArray(parent[key])) {
 				for (const item of parent[key]) {
-					if (!item) continue;
-					if (item.nodeId === targetChildNodeId) return key;
+					if (item?.nodeId === targetChildNodeId) return key;
 				}
 			}
 		}
@@ -97,7 +96,7 @@ function generateFlatAST(inputCode, opts = {}) {
 				// If the current node is the function's id, use the parent scope
 				if (node.scope && node.type === 'Identifier' && parentNode.type === 'FunctionDeclaration') node.scope = node.scope.upper;
 				if (parentNode) parentNode.childNodes.push(node);
-				if (node.type === 'Identifier') {
+				if (node?.scope?.variables && node.type === 'Identifier') {
 					// Collect all references for this identifier, self excluded
 					const refs = node.scope.variables.filter(n =>
 						n.identifiers.length &&
