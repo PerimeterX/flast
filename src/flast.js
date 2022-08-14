@@ -97,11 +97,18 @@ function generateFlatAST(inputCode, opts = {}) {
 				if (node.scope && node.type === 'Identifier' && parentNode.type === 'FunctionDeclaration') node.scope = node.scope.upper;
 				if (parentNode) parentNode.childNodes.push(node);
 				if (node.type === 'Identifier') {
+					const childScopes = node.scope.childScopes || [];
+					const vars = node.scope.variables || [];
+					while (childScopes.length > 0) {
+						const childScope = childScopes.pop();
+						if (childScope.variables) vars.push(...childScope.variables);
+						if (childScope.childScopes) childScopes.push(...childScope.childScopes);
+					}
 					// Collect all references for this identifier, self excluded
-					const refs = node.scope.variables.filter(n =>
+					const refs = vars.filter(n =>
 						n.identifiers.length &&
 						n.identifiers[0].nodeId === node.nodeId);
-					if (refs.length === 1) {
+					if (refs.length >= 1) {
 						node.references = refs[0].references.map(r => r.identifier).filter(n => n.nodeId !== node.nodeId);
 						node.references.forEach(n => n.declNode = node);
 					}
