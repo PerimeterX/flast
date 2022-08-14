@@ -8,6 +8,7 @@ const estraverse = require('estraverse');
 const {analyze, ScopeManager} = require('eslint-scope');
 
 const ecmaVersion = 'latest';
+const sourceType = 'module';
 
 /**
  * @typedef ASTNode
@@ -54,7 +55,7 @@ const generateFlatASTDefaultOptions = {
 	detailed: true,   // If false, include only original node without any further details
 	includeSrc: true, // If false, do not include node src. Only available when `detailed` option is true
 	parseOpts: {      // Options for the espree parser
-		sourceType: 'module',
+		sourceType,
 	},
 };
 
@@ -70,16 +71,15 @@ function generateFlatAST(inputCode, opts = {}) {
 	let scopeManager;
 	try {
 		if (opts.detailed) { // noinspection JSCheckFunctionSignatures
-			scopeManager = analyze(rootNode, {optimistic: true, ecmaVersion});
+			scopeManager = analyze(rootNode, {
+				optimistic: true,
+				ecmaVersion,
+				sourceType});
 		}
 	} catch {}
 	const tree = [];
 	let nodeId = 0;
 	let scopeId = 0;
-	let currentScope;
-	if (opts.detailed) { // noinspection JSCheckFunctionSignatures
-		currentScope = scopeManager?.acquire(rootNode) ?? {};
-	}
 	estraverse.traverse(rootNode, {
 		enter(node, parentNode) {
 			if (opts.detailed) {
@@ -88,29 +88,50 @@ function generateFlatAST(inputCode, opts = {}) {
 				node.childNodes = [];
 				node.parentNode = parentNode;
 				node.parentKey = getParentKey(parentNode, node.nodeId);
-				// Set new scope when entering a function structure
-				if (scopeManager && /Function/.test(node.type)) currentScope = scopeManager.acquire(node);
-				if (currentScope && currentScope.scopeId === undefined) currentScope.scopeId = scopeId++;
-				// If no scope was acquired use parent scope
-				node.scope = currentScope ? currentScope : node.parentNode.scope;
-				// If the current node is the function's id, use the parent scope
-				if (node.scope && node.type === 'Identifier' && parentNode.type === 'FunctionDeclaration') node.scope = node.scope.upper;
+
+				// Keep track of the node's lineage
+				if (parentNode) node.lineage = [...parentNode?.lineage || [], parentNode.nodeId];
+				// Acquire scope
+				node.scope = scopeManager.acquire(node);
+				if (!node.scope) node.scope = node.parentNode.scope;
+				if (node.scope.scopeId === undefined) node.scope.scopeId = scopeId++;
 				if (parentNode) parentNode.childNodes.push(node);
 				if (node.type === 'Identifier') {
-					// Collect all references for this identifier, self excluded
-					const refs = node.scope.variables.filter(n =>
-						n.identifiers.length &&
-						n.identifiers[0].nodeId === node.nodeId);
-					if (refs.length === 1) {
-						node.references = refs[0].references.map(r => r.identifier).filter(n => n.nodeId !== node.nodeId);
-						node.references.forEach(n => n.declNode = node);
+					// Track references and declarations
+					// Prevent assigning declNode to member expression properties or object keys
+					if (!(['property', 'key'].includes(node.parentKey) && !parentNode.computed)) {
+						const variables = node.scope.variables.filter(n => n.name === node.name);
+						const isDeclaration = variables?.length && variables[0].identifiers.filter(n => n.nodeId === node.nodeId).length;
+						if (isDeclaration) node.references = node.references || [];
+						else {
+							// Find declaration by finding the closest declaration of the same name.
+							let decls = [];
+							if (variables?.length) decls = variables.filter(n => n.name === node.name)[0].identifiers;
+							else {
+								const scopeReferences = node.scope.references.filter(n => n.identifier.name === node.name);
+								if (scopeReferences.length) decls = scopeReferences[0].resolved?.identifiers || [];
+							}
+							let declNode = decls[0];
+							if (decls.length > 1) {   // TODO: Defer setting declaration and references
+								let commonAncestors = node.lineage.reduce((t, c) => declNode.lineage?.includes(c) ? ++t : t, 0);
+								decls.slice(1).forEach(n => {
+									const ca = node.lineage.reduce((t, c) => n.lineage?.includes(c) ? ++t : t, 0);
+									if (ca > commonAncestors) {
+										commonAncestors = ca;
+										declNode = n;
+									}
+								});
+							}
+							if (declNode) {
+								if (!declNode.references) declNode.references = [];
+								declNode.references.push(node);
+								node.declNode = declNode;
+							}
+						}
 					}
 				}
 			}
 			tree.push(node);
-		},
-		leave(node) {
-			if (scopeManager && /Function/.test(node.type)) currentScope = scopeManager.upper;
 		},
 	});
 	return tree;
