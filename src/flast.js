@@ -94,6 +94,7 @@ function generateFlatAST(inputCode, opts = {}) {
 				// Acquire scope
 				node.scope = scopeManager.acquire(node);
 				if (!node.scope) node.scope = node.parentNode.scope;
+				else if (node.scope.type.includes('-name') && node.scope?.childScopes?.length === 1) node.scope = node.scope.childScopes[0];
 				if (node.scope.scopeId === undefined) node.scope.scopeId = scopeId++;
 				if (parentNode) parentNode.childNodes.push(node);
 				if (node.type === 'Identifier') {
