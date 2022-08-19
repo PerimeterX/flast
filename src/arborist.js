@@ -1,6 +1,4 @@
 // eslint-disable-next-line no-unused-vars
-const {ASTNode} = require('espree');
-
 const estraverse = require('estraverse');
 const {generateCode, generateFlatAST} = require(__dirname + '/flast');
 const Arborist = class {

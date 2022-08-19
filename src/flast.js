@@ -1,25 +1,13 @@
 // noinspection JSUnusedGlobalSymbols
 
-// eslint-disable-next-line no-unused-vars
-const {parse, ASTNode:espreeASTNode} = require('espree');
+const {parse} = require('espree');
 const {generate} = require('escodegen');
 const estraverse = require('estraverse');
-// eslint-disable-next-line no-unused-vars
-const {analyze, ScopeManager} = require('eslint-scope');
+const {analyze} = require('eslint-scope');
 
 const ecmaVersion = 'latest';
 const sourceType = 'module';
 
-/**
- * @typedef ASTNode
- * @property {number} nodeId
- * @property {string} src
- * @property {array} childNodes
- * @property {?ASTNode} parentNode
- * @property {ScopeManager} scope
- * @property {?string} parentKey
- */
-const ASTNode = espreeASTNode;
 
 /**
  * @param {string} inputCode
@@ -165,5 +153,4 @@ module.exports = {
 	parseCode,
 	estraverse,
 	generateCode,
-	ASTNode,
 };
