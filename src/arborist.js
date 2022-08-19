@@ -27,7 +27,7 @@ const Arborist = class {
 			['ExpressionStatement', 'UnaryExpression', 'UpdateExpression'].includes(currentNode?.parentNode?.type) ||
 			(currentNode.parentNode.type === 'VariableDeclaration' &&
 				(currentNode.parentNode.declarations.length === 1 ||
-				!currentNode.parentNode.declarations.filter(d => d.nodeId !== currentNode.nodeId && !d.markedNode).length)
+				!currentNode.parentNode.declarations.filter(d => d.nodeId !== currentNode.nodeId && !d.isMarked).length)
 			)) currentNode = currentNode.parentNode;
 		return currentNode;
 	}
@@ -39,15 +39,15 @@ const Arborist = class {
 	 * @param replacementNode If exists, replace the target node with this node.
 	 */
 	markNode(targetNode, replacementNode) {
-		if (!targetNode.markedNode) {
+		if (!targetNode.isMarked) {
 			if (replacementNode) {  // Mark for replacement
 				this.markedForReplacement[targetNode.nodeId] = replacementNode;
-				targetNode.markedNode = true;
+				targetNode.isMarked = true;
 			} else {                // Mark for deletion
 				targetNode = this._getCorrectTargetForDeletion(targetNode);
-				if (!targetNode.markedNode) {
+				if (!targetNode.isMarked) {
 					this.markedForDeletion.push(targetNode.nodeId);
-					targetNode.markedNode = true;
+					targetNode.isMarked = true;
 				}
 			}
 			this.ast = this.ast.filter(n => n.nodeId !== targetNode.nodeId);
