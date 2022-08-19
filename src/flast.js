@@ -15,7 +15,6 @@ const sourceType = 'module';
  * @return {ASTNode} The root of the AST
  */
 function parseCode(inputCode, opts = {}) {
-	// noinspection JSValidateTypes
 	return parse(inputCode, {ecmaVersion, comment: true, range: true, ...opts});
 }
 
@@ -69,6 +68,10 @@ function generateFlatAST(inputCode, opts = {}) {
 	let nodeId = 0;
 	let scopeId = 0;
 	estraverse.traverse(rootNode, {
+		/**
+		 * @param {ASTNode} node
+		 * @param {ASTNode} parentNode
+		 */
 		enter(node, parentNode) {
 			if (opts.detailed) {
 				node.nodeId = nodeId++;
