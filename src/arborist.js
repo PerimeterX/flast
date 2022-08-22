@@ -73,12 +73,15 @@ const Arborist = class {
 						if (replacementNodeIds.includes(node.nodeId)) {
 							if (badReplacements.includes(node.src) && that._badReplacements[node.src] === that.markedForReplacement[node.nodeId]) return;
 							changesCounter++;
-							const nsrc = node.src.substring(0, that.maxLogLength)
+							const nsrc = node.src.replace(/\n/g, ' ')
+								.substring(0, that.maxLogLength)
 								.replace(/([\n\r])/g, ' ')
 								.replace(/\s{2,}/g, ' ')
 								.padEnd(that.maxLogLength, ' ');
 							if (!replacementLogCache.includes(nsrc)) {
-								const tsrc = generateCode(that.markedForReplacement[node.nodeId]).substring(0, that.maxLogLength)
+								const tsrc = generateCode(that.markedForReplacement[node.nodeId])
+									.replace(/\n/g, ' ')
+									.substring(0, that.maxLogLength)
 									.replace(/([\n\r])/g, ' ')
 									.replace(/\s{2,}/g, ' ');
 								that.log(`\t\t[+] Replacing\t${nsrc}\t--with--\t${tsrc}`, 2);
