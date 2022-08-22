@@ -58,4 +58,7 @@
  * @property {ASTNode|null} [update]
  * @property {ASTNode|string|number|boolean|null} [value]
  */
-module.exports = class ASTNode {};
+class ASTNode {}
+module.exports = {
+	ASTNode,
+};
