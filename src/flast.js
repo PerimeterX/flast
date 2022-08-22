@@ -1,25 +1,13 @@
 // noinspection JSUnusedGlobalSymbols
 
-// eslint-disable-next-line no-unused-vars
-const {parse, ASTNode:espreeASTNode} = require('espree');
+const {parse} = require('espree');
 const {generate} = require('escodegen');
 const estraverse = require('estraverse');
-// eslint-disable-next-line no-unused-vars
-const {analyze, ScopeManager} = require('eslint-scope');
+const {analyze} = require('eslint-scope');
 
 const ecmaVersion = 'latest';
 const sourceType = 'module';
 
-/**
- * @typedef ASTNode
- * @property {number} nodeId
- * @property {string} src
- * @property {array} childNodes
- * @property {?ASTNode} parentNode
- * @property {ScopeManager} scope
- * @property {?string} parentKey
- */
-const ASTNode = espreeASTNode;
 
 /**
  * @param {string} inputCode
@@ -27,7 +15,6 @@ const ASTNode = espreeASTNode;
  * @return {ASTNode} The root of the AST
  */
 function parseCode(inputCode, opts = {}) {
-	// noinspection JSValidateTypes
 	return parse(inputCode, {ecmaVersion, comment: true, range: true, ...opts});
 }
 
@@ -81,6 +68,10 @@ function generateFlatAST(inputCode, opts = {}) {
 	let nodeId = 0;
 	let scopeId = 0;
 	estraverse.traverse(rootNode, {
+		/**
+		 * @param {ASTNode} node
+		 * @param {ASTNode} parentNode
+		 */
 		enter(node, parentNode) {
 			if (opts.detailed) {
 				node.nodeId = nodeId++;
@@ -165,5 +156,4 @@ module.exports = {
 	parseCode,
 	estraverse,
 	generateCode,
-	ASTNode,
 };
