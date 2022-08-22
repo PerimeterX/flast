@@ -47,6 +47,7 @@
  * @property {ASTNode} [regex]
  * @property {ASTNode} [right]
  * @property {ScopeManager} [scope]
+ * @property {string} [scriptHash]
  * @property {boolean} [shorthand]
  * @property {boolean} [static]
  * @property {number} [start]
