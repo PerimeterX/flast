@@ -14,6 +14,7 @@ const Arborist = class {
 		this.markedForDeletion     = [];  // Array of node ids.
 		this.markedForReplacement  = {};  // nodeId: replacementNode pairs.
 		this._badReplacements      = {};  // Replacements which broke the code and should not be attempted again.
+		this.appliedCounter        = 0;   // Track the number of times changes were applied.
 	}
 
 	/**
@@ -65,6 +66,7 @@ const Arborist = class {
 			const that = this;
 			const replacementNodeIds = Object.keys(this.markedForReplacement).map(nid => parseInt(nid));
 			if (!replacementNodeIds.length && !this.markedForDeletion.length) return changesCounter;
+			const removalLogCache = [];     // Prevents multiple printing of similar changes to the log
 			const replacementLogCache = [];
 			const badReplacements = Object.keys(this._badReplacements);
 			estraverse.replace(this.ast[0], {
@@ -72,7 +74,6 @@ const Arborist = class {
 					try {
 						if (replacementNodeIds.includes(node.nodeId)) {
 							if (badReplacements.includes(node.src) && that._badReplacements[node.src] === that.markedForReplacement[node.nodeId]) return;
-							changesCounter++;
 							const nsrc = node.src.replace(/\n/g, ' ')
 								.substring(0, that.maxLogLength)
 								.replace(/([\n\r])/g, ' ')
@@ -87,11 +88,16 @@ const Arborist = class {
 								that.log(`\t\t[+] Replacing\t${nsrc}\t--with--\t${tsrc}`, 2);
 								replacementLogCache.push(nsrc);
 							}
+							++changesCounter;
 							return that.markedForReplacement[node.nodeId];
 						} else if (that.markedForDeletion.includes(node.nodeId)) {
-							that.log(`\t\t[+] Removing\t${node.src.substring(0, that.maxLogLength).replace(/([\n\r])/g, ' ').replace(/\s{2,}/g, ' ').padEnd(that.maxLogLength, ' ')}`, 2);
+							const ns = node.src.substring(0, that.maxLogLength).replace(/([\n\r])/g, ' ').replace(/\s{2,}/g, ' ').padEnd(that.maxLogLength, ' ');
+							if (!removalLogCache.includes(ns)) {
+								that.log(`\t\t[+] Removing\t${ns}`, 2);
+								removalLogCache.push(ns);
+							}
 							this.remove();
-							changesCounter++;
+							++changesCounter;
 							return null;
 						}
 					} catch (e) {
@@ -110,6 +116,7 @@ const Arborist = class {
 		} catch (e) {
 			this.log(`[-] Unable to apply changes to AST: ${e}`);
 		}
+		++this.appliedCounter;
 		return changesCounter;
 	}
 };
