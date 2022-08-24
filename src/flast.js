@@ -29,8 +29,8 @@ function getParentKey(parent, targetChildNodeId) {
 		for (const key of Object.keys(parent)) {
 			if (parent[key]?.nodeId === targetChildNodeId) return key;
 			else if (Array.isArray(parent[key])) {
-				for (const item of parent[key]) {
-					if (item.nodeId === targetChildNodeId) return key;
+				for (const item of (parent[key] || [])) {
+					if (item?.nodeId === targetChildNodeId) return key;
 				}
 			}
 		}
@@ -78,7 +78,7 @@ function generateFlatAST(inputCode, opts = {}) {
 				if (opts.includeSrc) node.src = inputCode.substring(node.range[0], node.range[1]);
 				node.childNodes = [];
 				node.parentNode = parentNode;
-				node.parentKey = getParentKey(parentNode, node.nodeId);
+				node.parentKey = parentNode ? getParentKey(parentNode, node.nodeId) : '';
 
 				// Keep track of the node's lineage
 				if (parentNode) node.lineage = [...parentNode?.lineage || [], parentNode.nodeId];
