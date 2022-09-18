@@ -86,4 +86,21 @@ module.exports = [
 				`Flat AST includes details despite 'detailed' option set to true and 'includeSrc' option set to false.`);
 		},
 	},
+	{
+		enabled: true,
+		name: 'Dynamic sourceType switching',
+		description: `Verify a script is parsed in "sloppy mode" if strict mode is restricting parsing.`,
+		run() {
+			const code = `let a; delete a;`;
+			let ast = [];
+			let error = '';
+			try {
+				ast = generateFlatAST(code);
+			} catch (e) {
+				error = e.message;
+			}
+			assert(ast.length,
+				`Script was not parsed. Got the error "${error}"`);
+		},
+	},
 ];
