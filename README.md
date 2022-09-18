@@ -186,13 +186,3 @@ inside the arborist.
 
 ## Contribution
 To contribute to this project see our [contribution guide](CONTRIBUTING.md)
-
-## Changes
-### v1.2.1
-- Overhaul scoping to account for declarations with the same name in different scopes.
-### v1.1.1
-- Improve getParentKey to include parsing the name of grouped nodes such as 'arguments' or 'body'.
-### v1.1.0
- - Added parentKey property.
- - Improved ASTNode definition (useful for intellisense).
- - Ability to pass options directly to the espree parser.
