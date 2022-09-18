@@ -44,4 +44,23 @@ module.exports = [
 				`Decleration node (outer scope) is incorrectly referenced. Got "${outerValResult}" instead of "${innerScopeVal}"`);
 		},
 	},
+	{
+		enabled: true,
+		name: 'Variable references are not confused with functions of the same name',
+		description: `Verify a function's identifier isn't treated as a reference.`,
+		run() {
+			const code = `function a() {
+			var a;
+			}`;
+			const ast = generateFlatAST(code);
+			const funcId = ast.find(n => n.name ==='a' && n.parentNode.type === 'FunctionDeclaration');
+			const varId = ast.find(n =>n.name ==='a' && n.parentNode.type === 'VariableDeclarator');
+			const functionReferencesFound = !!funcId.references?.length;
+			const variableReferencesFound = !!varId.references?.length;
+			assert(!functionReferencesFound,
+				`References to a function were incorrectly found. Got "${functionReferencesFound}" instead of "false"`);
+			assert(!variableReferencesFound,
+				`References to a variable were incorrectly found. Got "${variableReferencesFound}" instead of "false"`);
+		},
+	},
 ];
