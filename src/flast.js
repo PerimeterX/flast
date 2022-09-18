@@ -54,7 +54,12 @@ const generateFlatASTDefaultOptions = {
 function generateFlatAST(inputCode, opts = {}) {
 	opts = { ...generateFlatASTDefaultOptions, ...opts };
 	const parseOpts = opts.parseOpts || {};
-	const rootNode = parseCode(inputCode, parseOpts);
+	let rootNode;
+	try {
+		rootNode = parseCode(inputCode, parseOpts);
+	} catch (e) {
+		if (e.message.includes('in strict mode')) rootNode = parseCode(inputCode, {...parseOpts, sourceType: 'script'});
+	}
 	let scopeManager;
 	try {
 		if (opts.detailed) { // noinspection JSCheckFunctionSignatures
