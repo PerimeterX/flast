@@ -1,4 +1,7 @@
 # flAST - FLat Abstract Syntax Tree
+[![Run Tests](https://github.com/PerimeterX/flast/actions/workflows/node.js.yml/badge.svg?branch=main)](https://github.com/PerimeterX/flast/actions/workflows/node.js.yml)
+[![Downloads](https://img.shields.io/npm/dm/flast.svg?maxAge=43200)](https://www.npmjs.com/package/flast)
+
 Flatten an Abstract Syntax Tree by placing all of the nodes in a single flat array.
 
 ## Features
