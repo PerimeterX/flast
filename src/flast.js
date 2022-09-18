@@ -95,7 +95,7 @@ function generateFlatAST(inputCode, opts = {}) {
 						const variables = node.scope.variables.filter(n => n.name === node.name);
 						const isDeclaration = variables?.length && variables[0].identifiers.filter(n => n.nodeId === node.nodeId).length;
 						if (isDeclaration) node.references = node.references || [];
-						else {
+						else if (!(node.parentKey === 'id' && node.parentNode.type === 'FunctionDeclaration'))  {
 							// Find declaration by finding the closest declaration of the same name.
 							let decls = [];
 							if (variables?.length) decls = variables.filter(n => n.name === node.name)[0].identifiers;
