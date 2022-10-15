@@ -1,5 +1,3 @@
-// noinspection JSUnusedGlobalSymbols
-
 const {parse} = require('espree');
 const {generate} = require('escodegen');
 const estraverse = require('estraverse');
@@ -39,9 +37,14 @@ function getParentKey(parent, targetChildNodeId) {
 }
 
 const generateFlatASTDefaultOptions = {
-	detailed: true,   // If false, include only original node without any further details
-	includeSrc: true, // If false, do not include node src. Only available when `detailed` option is true
-	parseOpts: {      // Options for the espree parser
+	// If false, include only original node without any further details
+	detailed: true,
+	// If false, do not include node src. Only available when `detailed` option is true
+	includeSrc: true,
+	// Retry to parse the code with sourceType: 'script' if 'module' failed with 'strict' error message
+	alernateSourceTypeOnFailure: true,
+	// Options for the espree parser
+	parseOpts: {
 		sourceType,
 	},
 };
@@ -67,7 +70,7 @@ function generateFlatAST(inputCode, opts = {}) {
 	try {
 		rootNode = parseCode(inputCode, parseOpts);
 	} catch (e) {
-		if (e.message.includes('in strict mode')) rootNode = parseCode(inputCode, {...parseOpts, sourceType: 'script'});
+		if (opts.alernateSourceTypeOnFailure && e.message.includes('in strict mode')) rootNode = parseCode(inputCode, {...parseOpts, sourceType: 'script'});
 	}
 	return flattenRootNode(rootNode, {inputCode, ...opts});
 }
@@ -183,6 +186,4 @@ module.exports = {
 	generateCode,
 	generateFlatAST,
 	parseCode,
-	estraverse,
-	generateCode,
 };
