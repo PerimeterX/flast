@@ -15,10 +15,10 @@ module.exports = [
 			const testedScope = [...new Set(ast.map(n => n.scope))][1];
 			const expectedParentScopeType = 'function-expression-name';
 			const expectedScopeType = 'function';
-			assert(testedScope.type === expectedScopeType,
-				`Unexpected scope. Got "${testedScope.type}" instead of "${expectedScopeType}"`);
-			assert(testedScope.upper.type === expectedParentScopeType,
-				`Tested scope is not the child of the correct scope. Got "${testedScope.upper.type}" instead of "${expectedParentScopeType}"`);
+			assert.equal(testedScope.type, expectedScopeType,
+				`Unexpected scope`);
+			assert.equal(testedScope.upper.type, expectedParentScopeType,
+				`Tested scope is not the child of the correct scope`);
 		},
 	},
 	{
@@ -38,10 +38,10 @@ module.exports = [
 			const [innerIdentifier, outerIdentifier] = ast.filter(n => n.type === 'Identifier' && n.parentNode.type === 'CallExpression');
 			const innerValResult = innerIdentifier.declNode.parentNode.init.value;
 			const outerValResult = outerIdentifier.declNode.parentNode.init.value;
-			assert(innerValResult === innerScopeVal,
-				`Decleration node (inner scope) is incorrectly referenced. Got "${innerValResult}" instead of "${innerScopeVal}"`);
-			assert(outerValResult === outerScopeVal,
-				`Decleration node (outer scope) is incorrectly referenced. Got "${outerValResult}" instead of "${innerScopeVal}"`);
+			assert.equal(innerValResult, innerScopeVal,
+				`Decleration node (inner scope) is incorrectly referenced.`);
+			assert.equal(outerValResult, outerScopeVal,
+				`Decleration node (outer scope) is incorrectly referenced.`);
 		},
 	},
 	{
@@ -57,10 +57,10 @@ module.exports = [
 			const varId = ast.find(n =>n.name ==='a' && n.parentNode.type === 'VariableDeclarator');
 			const functionReferencesFound = !!funcId.references?.length;
 			const variableReferencesFound = !!varId.references?.length;
-			assert(!functionReferencesFound,
-				`References to a function were incorrectly found. Got "${functionReferencesFound}" instead of "false"`);
-			assert(!variableReferencesFound,
-				`References to a variable were incorrectly found. Got "${variableReferencesFound}" instead of "false"`);
+			assert.ok(!functionReferencesFound,
+				`References to a function were incorrectly found`);
+			assert.ok(!variableReferencesFound,
+				`References to a variable were incorrectly found`);
 		},
 	},
 ];
