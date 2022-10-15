@@ -3,18 +3,24 @@ const estraverse = require('estraverse');
 const {generateCode, generateFlatAST} = require(__dirname + '/flast');
 const Arborist = class {
 	/**
-	 *
-	 * @param {ASTNode[]} ast - A flattened AST structure where the first item is the root object.
+	 * @param {string|ASTNode[]} scriptOrFlatAstArr - the target script or a flat AST array
 	 * @param {Function} logFunc - (optional) Logging function
 	 */
-	constructor(ast, logFunc = null) {
-		this.ast                   = ast;
-		this.log                   = logFunc || (() => {});
+	constructor(scriptOrFlatAstArr, logFunc = null) {
+		this.script                = '';
+		this.ast                   = [];
+		this.log                   = logFunc || (() => true);
 		this.maxLogLength          = 60;  // Max length of logged strings.
 		this.markedForDeletion     = [];  // Array of node ids.
 		this.markedForReplacement  = {};  // nodeId: replacementNode pairs.
 		this._badReplacements      = {};  // Replacements which broke the code and should not be attempted again.
 		this.appliedCounter        = 0;   // Track the number of times changes were applied.
+		if (typeof scriptOrFlatAstArr === 'string') {
+			this.script = scriptOrFlatAstArr;
+			this.ast = generateFlatAST(scriptOrFlatAstArr);
+		} else if (Array.isArray(scriptOrFlatAstArr)) {
+			this.ast = scriptOrFlatAstArr;
+		} else throw Error(`Undetermined argument`);
 	}
 
 	/**
