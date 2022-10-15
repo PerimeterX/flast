@@ -47,6 +47,15 @@ const generateFlatASTDefaultOptions = {
 };
 
 /**
+ * Return a function which retrieves a node's source on demand
+ * @param {string} src
+ * @returns {function(number, number): string}
+ */
+function createSrcClosure(src) {
+	return function(start, end) {return src.slice(start, end);};
+}
+
+/**
  * @param {string} inputCode
  * @param {object} opts Optional changes to behavior. See generateFlatASTDefaultOptions for available options.
  * @return {ASTNode[]} An array of flattened AST
@@ -81,6 +90,7 @@ function flattenRootNode(rootNode, opts = {}) {
 	const tree = [];
 	let nodeId = 0;
 	let scopeId = 0;
+	const srcClosure = opts.inputCode ? createSrcClosure(opts.inputCode) : () => undefined;
 	estraverse.traverse(rootNode, {
 		/**
 		 * @param {ASTNode} node
@@ -89,7 +99,9 @@ function flattenRootNode(rootNode, opts = {}) {
 		enter(node, parentNode) {
 			if (opts.detailed) {
 				node.nodeId = nodeId++;
-				if (opts.includeSrc) node.src = inputCode.substring(node.range[0], node.range[1]);
+				if (opts.includeSrc) Object.defineProperty(node, 'src', {
+					get() { return srcClosure(node.range[0], node.range[1]);},
+				});
 				node.childNodes = [];
 				node.parentNode = parentNode;
 				node.parentKey = parentNode ? getParentKey(parentNode, node.nodeId) : '';
