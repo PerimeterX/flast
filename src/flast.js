@@ -1,5 +1,3 @@
-// noinspection JSUnusedGlobalSymbols
-
 const {parse} = require('espree');
 const {generate} = require('escodegen');
 const estraverse = require('estraverse');
@@ -39,12 +37,26 @@ function getParentKey(parent, targetChildNodeId) {
 }
 
 const generateFlatASTDefaultOptions = {
-	detailed: true,   // If false, include only original node without any further details
-	includeSrc: true, // If false, do not include node src. Only available when `detailed` option is true
-	parseOpts: {      // Options for the espree parser
+	// If false, include only original node without any further details
+	detailed: true,
+	// If false, do not include node src. Only available when `detailed` option is true
+	includeSrc: true,
+	// Retry to parse the code with sourceType: 'script' if 'module' failed with 'strict' error message
+	alernateSourceTypeOnFailure: true,
+	// Options for the espree parser
+	parseOpts: {
 		sourceType,
 	},
 };
+
+/**
+ * Return a function which retrieves a node's source on demand
+ * @param {string} src
+ * @returns {function(number, number): string}
+ */
+function createSrcClosure(src) {
+	return function(start, end) {return src.slice(start, end);};
+}
 
 /**
  * @param {string} inputCode
@@ -58,8 +70,17 @@ function generateFlatAST(inputCode, opts = {}) {
 	try {
 		rootNode = parseCode(inputCode, parseOpts);
 	} catch (e) {
-		if (e.message.includes('in strict mode')) rootNode = parseCode(inputCode, {...parseOpts, sourceType: 'script'});
+		if (opts.alernateSourceTypeOnFailure && e.message.includes('in strict mode')) rootNode = parseCode(inputCode, {...parseOpts, sourceType: 'script'});
 	}
+	return flattenRootNode(rootNode, {inputCode, ...opts});
+}
+
+/**
+ * @param {ASTNode} rootNode
+ * @param {object} opts
+ * @returns {ASTNode[]}
+ */
+function flattenRootNode(rootNode, opts = {}) {
 	let scopeManager;
 	try {
 		if (opts.detailed) { // noinspection JSCheckFunctionSignatures
@@ -72,6 +93,7 @@ function generateFlatAST(inputCode, opts = {}) {
 	const tree = [];
 	let nodeId = 0;
 	let scopeId = 0;
+	const srcClosure = opts.inputCode ? createSrcClosure(opts.inputCode) : () => undefined;
 	estraverse.traverse(rootNode, {
 		/**
 		 * @param {ASTNode} node
@@ -80,7 +102,9 @@ function generateFlatAST(inputCode, opts = {}) {
 		enter(node, parentNode) {
 			if (opts.detailed) {
 				node.nodeId = nodeId++;
-				if (opts.includeSrc) node.src = inputCode.substring(node.range[0], node.range[1]);
+				if (opts.includeSrc) Object.defineProperty(node, 'src', {
+					get() { return srcClosure(node.range[0], node.range[1]);},
+				});
 				node.childNodes = [];
 				node.parentNode = parentNode;
 				node.parentKey = parentNode ? getParentKey(parentNode, node.nodeId) : '';
@@ -157,8 +181,9 @@ function generateCode(rootNode, opts = {}) {
 }
 
 module.exports = {
+	estraverse,
+	flattenRootNode,
+	generateCode,
 	generateFlatAST,
 	parseCode,
-	estraverse,
-	generateCode,
 };

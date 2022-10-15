@@ -1,20 +1,26 @@
 // eslint-disable-next-line no-unused-vars
 const estraverse = require('estraverse');
-const {generateCode, generateFlatAST} = require(__dirname + '/flast');
+const {generateCode, generateFlatAST, flattenRootNode} = require(__dirname + '/flast');
+
 const Arborist = class {
 	/**
-	 *
-	 * @param {ASTNode[]} ast - A flattened AST structure where the first item is the root object.
+	 * @param {string|ASTNode[]} scriptOrFlatAstArr - the target script or a flat AST array
 	 * @param {Function} logFunc - (optional) Logging function
 	 */
-	constructor(ast, logFunc = null) {
-		this.ast                   = ast;
-		this.log                   = logFunc || (() => {});
+	constructor(scriptOrFlatAstArr, logFunc = null) {
+		this.script                = '';
+		this.ast                   = [];
+		this.log                   = logFunc || (() => true);
 		this.maxLogLength          = 60;  // Max length of logged strings.
 		this.markedForDeletion     = [];  // Array of node ids.
 		this.markedForReplacement  = {};  // nodeId: replacementNode pairs.
-		this._badReplacements      = {};  // Replacements which broke the code and should not be attempted again.
 		this.appliedCounter        = 0;   // Track the number of times changes were applied.
+		if (typeof scriptOrFlatAstArr === 'string') {
+			this.script = scriptOrFlatAstArr;
+			this.ast = generateFlatAST(scriptOrFlatAstArr);
+		} else if (Array.isArray(scriptOrFlatAstArr)) {
+			this.ast = scriptOrFlatAstArr;
+		} else throw Error(`Undetermined argument`);
 	}
 
 	/**
@@ -28,9 +34,32 @@ const Arborist = class {
 			['ExpressionStatement', 'UnaryExpression', 'UpdateExpression'].includes(currentNode?.parentNode?.type) ||
 			(currentNode.parentNode.type === 'VariableDeclaration' &&
 				(currentNode.parentNode.declarations.length === 1 ||
-				!currentNode.parentNode.declarations.filter(d => d.nodeId !== currentNode.nodeId && !d.isMarked).length)
+					!currentNode.parentNode.declarations.filter(d => d.nodeId !== currentNode.nodeId && !d.isMarked).length)
 			)) currentNode = currentNode.parentNode;
 		return currentNode;
+	}
+
+	/**
+	 * @param {string} src
+	 * @param {boolean} padEnd Pad end with spaces to the maxLogLength if true.
+	 * @returns {string} A parsed string fit for a log.
+	 * @private
+	 */
+	_parseSrcForLog(src, padEnd = false) {
+		const output = src
+			.replace(/\n/g, ' ')
+			.substring(0, this.maxLogLength)
+			.replace(/([\n\r])/g, ' ')
+			.replace(/\s{2,}/g, ' ');
+		return padEnd ? output.padEnd(this.maxLogLength, ' ') : output;
+	}
+
+	/**
+	 *
+	 * @returns {number} The number of changes to be applied.
+	 */
+	getNumberOfChanges() {
+		return Object.keys(this.markedForReplacement).length + this.markedForDeletion.length;
 	}
 
 	/**
@@ -65,53 +94,50 @@ const Arborist = class {
 		try {
 			const that = this;
 			const replacementNodeIds = Object.keys(this.markedForReplacement).map(nid => parseInt(nid));
-			if (!replacementNodeIds.length && !this.markedForDeletion.length) return changesCounter;
-			const removalLogCache = [];     // Prevents multiple printing of similar changes to the log
-			const replacementLogCache = [];
-			const badReplacements = Object.keys(this._badReplacements);
-			estraverse.replace(this.ast[0], {
-				enter(node) {
-					try {
-						if (replacementNodeIds.includes(node.nodeId)) {
-							if (badReplacements.includes(node.src) && that._badReplacements[node.src] === that.markedForReplacement[node.nodeId]) return;
-							const nsrc = node.src.replace(/\n/g, ' ')
-								.substring(0, that.maxLogLength)
-								.replace(/([\n\r])/g, ' ')
-								.replace(/\s{2,}/g, ' ')
-								.padEnd(that.maxLogLength, ' ');
-							if (!replacementLogCache.includes(nsrc)) {
-								const tsrc = generateCode(that.markedForReplacement[node.nodeId])
-									.replace(/\n/g, ' ')
-									.substring(0, that.maxLogLength)
-									.replace(/([\n\r])/g, ' ')
-									.replace(/\s{2,}/g, ' ');
-								that.log(`\t\t[+] Replacing\t${nsrc}\t--with--\t${tsrc}`, 2);
-								replacementLogCache.push(nsrc);
+			if (this.getNumberOfChanges() > 0) {
+				const removalLogCache = [];     // Prevents multiple printing of similar changes to the log
+				const replacementLogCache = [];
+				const badReplacements = [];
+				const rootNode = this.ast[0];
+				estraverse.replace(rootNode, {
+					enter(node) {
+						try {
+							if (replacementNodeIds.includes(node.nodeId)) {
+								if (badReplacements.includes(node.src)) return;
+								const nsrc = that._parseSrcForLog(node.src, true);
+								if (!replacementLogCache.includes(nsrc)) {
+									const tsrc = that._parseSrcForLog(generateCode(that.markedForReplacement[node.nodeId]));
+									that.log(`\t\t[+] Replacing\t${nsrc}\t--with--\t${tsrc}`, 2);
+									replacementLogCache.push(nsrc);
+								}
+								++changesCounter;
+								return that.markedForReplacement[node.nodeId];
+							} else if (that.markedForDeletion.includes(node.nodeId)) {
+								const ns = that._parseSrcForLog(node.src);
+								if (!removalLogCache.includes(ns)) {
+									that.log(`\t\t[+] Removing\t${ns}`, 2);
+									removalLogCache.push(ns);
+								}
+								this.remove();
+								++changesCounter;
+								return null;
 							}
-							++changesCounter;
-							return that.markedForReplacement[node.nodeId];
-						} else if (that.markedForDeletion.includes(node.nodeId)) {
-							const ns = node.src.substring(0, that.maxLogLength).replace(/([\n\r])/g, ' ').replace(/\s{2,}/g, ' ').padEnd(that.maxLogLength, ' ');
-							if (!removalLogCache.includes(ns)) {
-								that.log(`\t\t[+] Removing\t${ns}`, 2);
-								removalLogCache.push(ns);
-							}
-							this.remove();
-							++changesCounter;
-							return null;
+						} catch (e) {
+							that.log(`[-] Unable to replace/delete node: ${e}`);
+							badReplacements.push(node.src);
 						}
-					} catch (e) {
-						that.log(`[-] Unable to replace/delete node: ${e}`);
-						that._badReplacements[node.src] = that.markedForReplacement[node.nodeId].src;
-					}
-				},
-			});
-			if (changesCounter) {
-				this.markedForReplacement = {};
-				this.markedForDeletion = [];
-				// If any of the changes made will break the script the next line will fail and the
-				// script will remain the same. If it doesn't break, the changes are valid and the script can be marked as modified.
-				this.ast = generateFlatAST(generateCode(this.ast[0]));
+					},
+				});
+				if (changesCounter) {
+					this.markedForReplacement = {};
+					this.markedForDeletion.length = 0;
+					// If any of the changes made will break the script the next line will fail and the
+					// script will remain the same. If it doesn't break, the changes are valid and the script can be marked as modified.
+					this.script = generateCode(rootNode);
+					const ast = flattenRootNode(rootNode);
+					if (ast && ast.length) this.ast = ast;
+					else throw Error('Script is broken.');
+				}
 			}
 		} catch (e) {
 			this.log(`[-] Unable to apply changes to AST: ${e}`);
