@@ -60,6 +60,15 @@ function generateFlatAST(inputCode, opts = {}) {
 	} catch (e) {
 		if (e.message.includes('in strict mode')) rootNode = parseCode(inputCode, {...parseOpts, sourceType: 'script'});
 	}
+	return flattenRootNode(rootNode, {inputCode, ...opts});
+}
+
+/**
+ * @param {ASTNode} rootNode
+ * @param {object} opts
+ * @returns {ASTNode[]}
+ */
+function flattenRootNode(rootNode, opts = {}) {
 	let scopeManager;
 	try {
 		if (opts.detailed) { // noinspection JSCheckFunctionSignatures
@@ -157,6 +166,9 @@ function generateCode(rootNode, opts = {}) {
 }
 
 module.exports = {
+	estraverse,
+	flattenRootNode,
+	generateCode,
 	generateFlatAST,
 	parseCode,
 	estraverse,
