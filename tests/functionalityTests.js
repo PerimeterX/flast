@@ -18,8 +18,8 @@ module.exports = [
 			expectedBreakdown.forEach(node => {
 				const parsedNode = ast[node.nodeId];
 				for (const [k, v] of Object.entries(node)) {
-					assert(parsedNode[k] === v,
-						`Value in parsed node, ${parsedNode[k]}, does not match expected value: ${v}, for key ${k}`);
+					assert.equal(v, parsedNode[k],
+						`Node #${parsedNode[k]} parsed wrong on key '${k}'`);
 				}
 			});
 		},
@@ -41,12 +41,12 @@ module.exports = [
 				Literal: 3,
 			};
 			const expectedNumberOfNodes = 11;
-			assert(ast.length === expectedNumberOfNodes,
-				`Unexpected number of nodes: Expected ${expectedNumberOfNodes} but got ${ast.length}`);
+			assert.equal(ast.length, expectedNumberOfNodes,
+				`Unexpected number of nodes`);
 			for (const nodeType of Object.keys(expectedBreakdown)) {
 				const numberOfNodes = ast.filter(n => n.type === nodeType).length;
-				assert(numberOfNodes === expectedBreakdown[nodeType],
-					`There are ${numberOfNodes} ${nodeType} nodes instead of the expected ${expectedBreakdown[nodeType]}`);
+				assert.equal(numberOfNodes, expectedBreakdown[nodeType],
+					`Wrong number of nodes for '${nodeType}' node type`);
 			}
 		},
 	},
@@ -58,8 +58,8 @@ module.exports = [
 			const code = `console.log('hello' + ' ' + 'there');`;
 			const ast = generateFlatAST(code);
 			const regeneratedCode = generateCode(ast[0]);
-			assert(code === regeneratedCode,
-				`Original code did not regenerate back to the same source.\nOriginal:\t${code}\nRegenerated:\t${regeneratedCode}`);
+			assert.equal(regeneratedCode, code,
+				`Original code did not regenerate back to the same source.`);
 		},
 	},
 	{
@@ -71,18 +71,16 @@ module.exports = [
 			const code = `var a = [1]; a[0];`;
 			const noDetailsAst = generateFlatAST(code, {detailed: false, includeSrc: true}); // includeSrc will be ignored
 			const [noDetailsVarDec, noDetailsVarRef] = noDetailsAst.filter(n => n.type === 'Identifier');
-			assert(!(
-				noDetailsVarDec.parentNode || noDetailsVarDec.childNodes || noDetailsVarDec.references ||
-					noDetailsVarRef.declNode || noDetailsVarRef.nodeId || noDetailsVarRef.scope || noDetailsVarRef.src),
+			assert.equal(noDetailsVarDec.parentNode || noDetailsVarDec.childNodes || noDetailsVarDec.references ||
+					noDetailsVarRef.declNode || noDetailsVarRef.nodeId || noDetailsVarRef.scope || noDetailsVarRef.src, undefined,
 			`Flat AST generated with details despite 'detailed' option set to false.`);
 			const detailedAst = generateFlatAST(code, {detailed: true});
 			const [detailedVarDec, detailedVarRef] = detailedAst.filter(n => n.type === 'Identifier');
-			assert(
-				detailedVarDec.parentNode && detailedVarDec.childNodes && detailedVarDec.references &&
+			assert.ok(detailedVarDec.parentNode && detailedVarDec.childNodes && detailedVarDec.references &&
 				detailedVarRef.declNode && detailedVarRef.nodeId && detailedVarRef.scope && detailedVarRef.src,
-				`Flat AST missing details despite 'detailed' option set to true.`);
+			`Flat AST missing details despite 'detailed' option set to true.`);
 			const detailedNoSrcAst = generateFlatAST(code, {detailed: true, includeSrc: false});
-			assert(!detailedNoSrcAst[0].src,
+			assert.equal(detailedNoSrcAst[0].src, undefined,
 				`Flat AST includes details despite 'detailed' option set to true and 'includeSrc' option set to false.`);
 		},
 	},
@@ -99,8 +97,34 @@ module.exports = [
 			} catch (e) {
 				error = e.message;
 			}
-			assert(ast.length,
+			assert.ok(ast.length,
 				`Script was not parsed. Got the error "${error}"`);
+		},
+	},
+	{
+		enabled: true,
+		name: 'Disable dynamic sourceType switching',
+		description: `Verify a script is only parsed in its selected sourceType.`,
+		run() {
+			const code = `let a; delete a;`;
+			let unparsedAst = [];
+			let parsedAst = [];
+			let unparsedError = '';
+			let parsedError = '';
+			try {
+				unparsedAst = generateFlatAST(code, {alernateSourceTypeOnFailure: false});
+			} catch (e) {
+				unparsedError = e.message;
+			}
+			try {
+				parsedAst = generateFlatAST(code, {alernateSourceTypeOnFailure: true});
+			} catch (e) {
+				parsedError = e.message;
+			}
+			assert.equal(unparsedAst.length, 0,
+				`Script was not parsed.${unparsedError ? 'Error: ' + unparsedError : ''}`);
+			assert.ok(parsedAst.length,
+				`Script was not parsed.${parsedError ? 'Error: ' + parsedError : ''}`);
 		},
 	},
 ];
