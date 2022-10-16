@@ -1,6 +1,6 @@
 // eslint-disable-next-line no-unused-vars
 const estraverse = require('estraverse');
-const {generateCode, generateFlatAST, flattenRootNode} = require(__dirname + '/flast');
+const {generateCode, generateFlatAST,} = require(__dirname + '/flast');
 
 const Arborist = class {
 	/**
@@ -134,7 +134,7 @@ const Arborist = class {
 					// If any of the changes made will break the script the next line will fail and the
 					// script will remain the same. If it doesn't break, the changes are valid and the script can be marked as modified.
 					this.script = generateCode(rootNode);
-					const ast = flattenRootNode(rootNode);
+					const ast = generateFlatAST(this.script);
 					if (ast && ast.length) this.ast = ast;
 					else throw Error('Script is broken.');
 				}

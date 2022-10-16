@@ -6,7 +6,6 @@ const {analyze} = require('eslint-scope');
 const ecmaVersion = 'latest';
 const sourceType = 'module';
 
-
 /**
  * @param {string} inputCode
  * @param {object} opts Additional options for espree
@@ -72,28 +71,20 @@ function generateFlatAST(inputCode, opts = {}) {
 	} catch (e) {
 		if (opts.alernateSourceTypeOnFailure && e.message.includes('in strict mode')) rootNode = parseCode(inputCode, {...parseOpts, sourceType: 'script'});
 	}
-	return flattenRootNode(rootNode, {inputCode, ...opts});
-}
-
-/**
- * @param {ASTNode} rootNode
- * @param {object} opts
- * @returns {ASTNode[]}
- */
-function flattenRootNode(rootNode, opts = {}) {
 	let scopeManager;
+	let srcClosure;
 	try {
 		if (opts.detailed) { // noinspection JSCheckFunctionSignatures
 			scopeManager = analyze(rootNode, {
 				optimistic: true,
 				ecmaVersion,
 				sourceType});
+			if (opts.includeSrc) srcClosure = createSrcClosure(inputCode);
 		}
 	} catch {}
 	const tree = [];
 	let nodeId = 0;
 	let scopeId = 0;
-	const srcClosure = opts.inputCode ? createSrcClosure(opts.inputCode) : () => undefined;
 	estraverse.traverse(rootNode, {
 		/**
 		 * @param {ASTNode} node
@@ -182,7 +173,6 @@ function generateCode(rootNode, opts = {}) {
 
 module.exports = {
 	estraverse,
-	flattenRootNode,
 	generateCode,
 	generateFlatAST,
 	parseCode,
