@@ -103,20 +103,24 @@ const Arborist = class {
 					enter(node) {
 						try {
 							if (replacementNodeIds.includes(node.nodeId)) {
-								if (badReplacements.includes(node.src)) return;
-								const nsrc = that._parseSrcForLog(node.src, true);
-								if (!replacementLogCache.includes(nsrc)) {
-									const tsrc = that._parseSrcForLog(generateCode(that.markedForReplacement[node.nodeId]));
-									that.log(`\t\t[+] Replacing\t${nsrc}\t--with--\t${tsrc}`, 2);
-									replacementLogCache.push(nsrc);
+								if (node.src) {
+									if (badReplacements.includes(node.src)) return;
+									const nsrc = that._parseSrcForLog(node.src, true);
+									if (!replacementLogCache.includes(nsrc)) {
+										const tsrc = that._parseSrcForLog(generateCode(that.markedForReplacement[node.nodeId]));
+										that.log(`\t\t[+] Replacing\t${nsrc}\t--with--\t${tsrc}`, 2);
+										replacementLogCache.push(nsrc);
+									}
 								}
 								++changesCounter;
 								return that.markedForReplacement[node.nodeId];
 							} else if (that.markedForDeletion.includes(node.nodeId)) {
-								const ns = that._parseSrcForLog(node.src);
-								if (!removalLogCache.includes(ns)) {
-									that.log(`\t\t[+] Removing\t${ns}`, 2);
-									removalLogCache.push(ns);
+								if (node.src) {
+									const ns = that._parseSrcForLog(node.src);
+									if (!removalLogCache.includes(ns)) {
+										that.log(`\t\t[+] Removing\t${ns}`, 2);
+										removalLogCache.push(ns);
+									}
 								}
 								this.remove();
 								++changesCounter;
