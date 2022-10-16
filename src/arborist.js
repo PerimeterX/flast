@@ -1,6 +1,6 @@
 // eslint-disable-next-line no-unused-vars
 const estraverse = require('estraverse');
-const {generateCode, generateFlatAST, flattenRootNode} = require(__dirname + '/flast');
+const {generateCode, generateFlatAST,} = require(__dirname + '/flast');
 
 const Arborist = class {
 	/**
@@ -103,20 +103,24 @@ const Arborist = class {
 					enter(node) {
 						try {
 							if (replacementNodeIds.includes(node.nodeId)) {
-								if (badReplacements.includes(node.src)) return;
-								const nsrc = that._parseSrcForLog(node.src, true);
-								if (!replacementLogCache.includes(nsrc)) {
-									const tsrc = that._parseSrcForLog(generateCode(that.markedForReplacement[node.nodeId]));
-									that.log(`\t\t[+] Replacing\t${nsrc}\t--with--\t${tsrc}`, 2);
-									replacementLogCache.push(nsrc);
+								if (node.src) {
+									if (badReplacements.includes(node.src)) return;
+									const nsrc = that._parseSrcForLog(node.src, true);
+									if (!replacementLogCache.includes(nsrc)) {
+										const tsrc = that._parseSrcForLog(generateCode(that.markedForReplacement[node.nodeId]));
+										that.log(`\t\t[+] Replacing\t${nsrc}\t--with--\t${tsrc}`, 2);
+										replacementLogCache.push(nsrc);
+									}
 								}
 								++changesCounter;
 								return that.markedForReplacement[node.nodeId];
 							} else if (that.markedForDeletion.includes(node.nodeId)) {
-								const ns = that._parseSrcForLog(node.src);
-								if (!removalLogCache.includes(ns)) {
-									that.log(`\t\t[+] Removing\t${ns}`, 2);
-									removalLogCache.push(ns);
+								if (node.src) {
+									const ns = that._parseSrcForLog(node.src);
+									if (!removalLogCache.includes(ns)) {
+										that.log(`\t\t[+] Removing\t${ns}`, 2);
+										removalLogCache.push(ns);
+									}
 								}
 								this.remove();
 								++changesCounter;
@@ -134,7 +138,7 @@ const Arborist = class {
 					// If any of the changes made will break the script the next line will fail and the
 					// script will remain the same. If it doesn't break, the changes are valid and the script can be marked as modified.
 					this.script = generateCode(rootNode);
-					const ast = flattenRootNode(rootNode);
+					const ast = generateFlatAST(this.script);
 					if (ast && ast.length) this.ast = ast;
 					else throw Error('Script is broken.');
 				}
