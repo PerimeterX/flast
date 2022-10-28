@@ -31,6 +31,50 @@ module.exports = [
 	},
 	{
 		enabled: true,
+		name: 'Root node replacement',
+		description: 'Verify the root node replacement works as expected.',
+		run() {
+			const code = `a;`;
+			const expectedOutput = `b`;
+			const arborist = new Arborist(code);
+			arborist.markNode(arborist.ast[0], {
+				type: 'Identifier',
+				name: 'b',
+			});
+			arborist.applyChanges();
+			const result = arborist.script;
+
+			assert.equal(result, expectedOutput,
+				`Result does not match expected output.`);
+			return true;
+		},
+	},
+	{
+		enabled: true,
+		name: 'Root node replacement - TN',
+		description: 'Verify only the root node is replaced .',
+		run() {
+			const code = `a;b;`;
+			const expectedOutput = `c`;
+			const arborist = new Arborist(code);
+			arborist.markNode(arborist.ast[4], {
+				type: 'Identifier',
+				name: 'v',
+			});
+			arborist.markNode(arborist.ast[0], {
+				type: 'Identifier',
+				name: 'c',
+			});
+			arborist.applyChanges();
+			const result = arborist.script;
+
+			assert.equal(result, expectedOutput,
+				`Result does not match expected output.`);
+			return true;
+		},
+	},
+	{
+		enabled: true,
 		name: 'Node deletion',
 		description: 'Verify node deletion works as expected.',
 		run() {

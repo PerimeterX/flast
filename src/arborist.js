@@ -95,43 +95,49 @@ const Arborist = class {
 			const that = this;
 			const replacementNodeIds = Object.keys(this.markedForReplacement).map(nid => parseInt(nid));
 			if (this.getNumberOfChanges() > 0) {
-				const removalLogCache = [];     // Prevents multiple printing of similar changes to the log
-				const replacementLogCache = [];
-				const badReplacements = [];
-				const rootNode = this.ast[0];
-				estraverse.replace(rootNode, {
-					enter(node) {
-						try {
-							if (replacementNodeIds.includes(node.nodeId)) {
-								if (node.src) {
-									if (badReplacements.includes(node.src)) return;
-									const nsrc = that._parseSrcForLog(node.src, true);
-									if (!replacementLogCache.includes(nsrc)) {
-										const tsrc = that._parseSrcForLog(generateCode(that.markedForReplacement[node.nodeId]));
-										that.log(`\t\t[+] Replacing\t${nsrc}\t--with--\t${tsrc}`, 2);
-										replacementLogCache.push(nsrc);
+				let rootNode = this.ast[0];
+				if (replacementNodeIds.includes(0)) {
+					++changesCounter;
+					this.log(`[+] Applying changes to the root node...`);
+					rootNode = this.markedForReplacement[0];
+				} else {
+					const removalLogCache = [];     // Prevents multiple printing of similar changes to the log
+					const replacementLogCache = [];
+					const badReplacements = [];
+					estraverse.replace(rootNode, {
+						enter(node) {
+							try {
+								if (replacementNodeIds.includes(node.nodeId)) {
+									if (node.src) {
+										if (badReplacements.includes(node.src)) return;
+										const nsrc = that._parseSrcForLog(node.src, true);
+										if (!replacementLogCache.includes(nsrc)) {
+											const tsrc = that._parseSrcForLog(generateCode(that.markedForReplacement[node.nodeId]));
+											that.log(`\t\t[+] Replacing\t${nsrc}\t--with--\t${tsrc}`, 2);
+											replacementLogCache.push(nsrc);
+										}
 									}
-								}
-								++changesCounter;
-								return that.markedForReplacement[node.nodeId];
-							} else if (that.markedForDeletion.includes(node.nodeId)) {
-								if (node.src) {
-									const ns = that._parseSrcForLog(node.src);
-									if (!removalLogCache.includes(ns)) {
-										that.log(`\t\t[+] Removing\t${ns}`, 2);
-										removalLogCache.push(ns);
+									++changesCounter;
+									return that.markedForReplacement[node.nodeId];
+								} else if (that.markedForDeletion.includes(node.nodeId)) {
+									if (node.src) {
+										const ns = that._parseSrcForLog(node.src);
+										if (!removalLogCache.includes(ns)) {
+											that.log(`\t\t[+] Removing\t${ns}`, 2);
+											removalLogCache.push(ns);
+										}
 									}
+									this.remove();
+									++changesCounter;
+									return null;
 								}
-								this.remove();
-								++changesCounter;
-								return null;
+							} catch (e) {
+								that.log(`[-] Unable to replace/delete node: ${e}`);
+								badReplacements.push(node.src);
 							}
-						} catch (e) {
-							that.log(`[-] Unable to replace/delete node: ${e}`);
-							badReplacements.push(node.src);
-						}
-					},
-				});
+						},
+					});
+				}
 				if (changesCounter) {
 					this.markedForReplacement = {};
 					this.markedForDeletion.length = 0;
