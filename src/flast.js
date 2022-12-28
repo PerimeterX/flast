@@ -36,7 +36,7 @@ function getParentKey(parent, targetChildNodeId) {
 }
 
 const generateFlatASTDefaultOptions = {
-	// If false, include only original node without any further details
+	// If false, include only original node with nodeId, without any further details
 	detailed: true,
 	// If false, do not include node src. Only available when `detailed` option is true
 	includeSrc: true,
@@ -91,8 +91,8 @@ function generateFlatAST(inputCode, opts = {}) {
 		 * @param {ASTNode} parentNode
 		 */
 		enter(node, parentNode) {
+			node.nodeId = nodeId++;
 			if (opts.detailed) {
-				node.nodeId = nodeId++;
 				if (opts.includeSrc) Object.defineProperty(node, 'src', {
 					get() { return srcClosure(node.range[0], node.range[1]);},
 				});
