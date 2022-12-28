@@ -72,7 +72,7 @@ module.exports = [
 			const noDetailsAst = generateFlatAST(code, {detailed: false, includeSrc: true}); // includeSrc will be ignored
 			const [noDetailsVarDec, noDetailsVarRef] = noDetailsAst.filter(n => n.type === 'Identifier');
 			assert.equal(noDetailsVarDec.parentNode || noDetailsVarDec.childNodes || noDetailsVarDec.references ||
-					noDetailsVarRef.declNode || noDetailsVarRef.nodeId || noDetailsVarRef.scope || noDetailsVarRef.src, undefined,
+					noDetailsVarRef.declNode || noDetailsVarRef.scope || noDetailsVarRef.src, undefined,
 			`Flat AST generated with details despite 'detailed' option set to false.`);
 			const detailedAst = generateFlatAST(code, {detailed: true});
 			const [detailedVarDec, detailedVarRef] = detailedAst.filter(n => n.type === 'Identifier');
