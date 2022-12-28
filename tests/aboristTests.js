@@ -139,4 +139,17 @@ module.exports = [
 				`Arborist ast array did not match initialization argument.`);
 		},
 	},
+	{
+		enabled: true,
+		name: `Invalid changes are not applied`,
+		description: `Verify a valid AST array can be used to initialize an arborist instance.`,
+		run() {
+			const code = `console.log('test');`;
+			const arborist = new Arborist(code);
+			arborist.markNode(arborist.ast.find(n => n.type === 'Literal'), {type: 'EmptyStatement'});
+			arborist.markNode(arborist.ast.find(n => n.name === 'log'), {type: 'EmptyStatement'});
+			arborist.applyChanges();
+			assert.equal(arborist.script, code);
+		},
+	},
 ];
