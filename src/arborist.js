@@ -109,22 +109,30 @@ const Arborist = class {
 							try {
 								if (replacementNodeIds.includes(node.nodeId)) {
 									if (node.src) {
-										if (badReplacements.includes(node.src)) return;
-										const nsrc = that._parseSrcForLog(node.src, true);
-										if (!replacementLogCache.includes(nsrc)) {
-											const tsrc = that._parseSrcForLog(generateCode(that.markedForReplacement[node.nodeId]));
-											that.log(`\t\t[+] Replacing\t${nsrc}\t--with--\t${tsrc}`, 2);
-											replacementLogCache.push(nsrc);
+										try {
+											if (badReplacements.includes(node.src)) return;
+											const nsrc = that._parseSrcForLog(node.src, true);
+											if (!replacementLogCache.includes(nsrc)) {
+												const tsrc = that._parseSrcForLog(generateCode(that.markedForReplacement[node.nodeId]));
+												that.log(`\t\t[+] Replacing\t${nsrc}\t--with--\t${tsrc}`, 2);
+												replacementLogCache.push(nsrc);
+											}
+										} catch {
+											that.log(`\t\t[+] Replacing ${that._parseSrcForLog('N/A')}\t--with\t${that._parseSrcForLog('N/A')}`);
 										}
 									}
 									++changesCounter;
 									return that.markedForReplacement[node.nodeId];
 								} else if (that.markedForDeletion.includes(node.nodeId)) {
 									if (node.src) {
-										const ns = that._parseSrcForLog(node.src);
-										if (!removalLogCache.includes(ns)) {
-											that.log(`\t\t[+] Removing\t${ns}`, 2);
-											removalLogCache.push(ns);
+										try {
+											const ns = that._parseSrcForLog(node.src);
+											if (!removalLogCache.includes(ns)) {
+												that.log(`\t\t[+] Removing\t${ns}`, 2);
+												removalLogCache.push(ns);
+											}
+										} catch {
+											that.log(`\t\t[+] Removing\tN/A`, 2);
 										}
 									}
 									this.remove();
@@ -143,10 +151,16 @@ const Arborist = class {
 					this.markedForDeletion.length = 0;
 					// If any of the changes made will break the script the next line will fail and the
 					// script will remain the same. If it doesn't break, the changes are valid and the script can be marked as modified.
-					this.script = generateCode(rootNode);
-					const ast = generateFlatAST(this.script);
-					if (ast && ast.length) this.ast = ast;
-					else throw Error('Script is broken.');
+					const script = generateCode(rootNode);
+					const ast = generateFlatAST(script);
+					if (ast && ast.length) {
+						this.ast = ast;
+						this.script = script;
+					}
+					else {
+						this.log(`[-] Modified script is invalid. Reverting ${changesCounter} changes...`);
+						changesCounter = 0;
+					}
 				}
 			}
 		} catch (e) {
