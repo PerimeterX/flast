@@ -1,3 +1,6 @@
+// eslint-disable-next-line no-unused-vars
+const {Scope} = require('eslint-scope');
+
 /**
  * @typedef ASTNode
  * @property {string} type
@@ -14,6 +17,7 @@
  * @property {ASTNode} [declaration]
  * @property {ASTNode[]} [declarations]
  * @property {ASTNode} [declNode]
+ * @property {boolean} [delegate]
  * @property {ASTNode[]} [elements]
  * @property {number} [end]
  * @property {ASTNode|boolean} [expression]
@@ -46,12 +50,13 @@
  * @property {ASTNode[]} [references]
  * @property {ASTNode} [regex]
  * @property {ASTNode} [right]
- * @property {ScopeManager} [scope]
+ * @property {Scope} [scope]
  * @property {string} [scriptHash]
  * @property {boolean} [shorthand]
+ * @property {string} [sourceType]
  * @property {boolean} [static]
  * @property {number} [start]
- * @property {string} [src]
+ * @property {string|function} [src]
  * @property {ASTNode|null} [superClass]
  * @property {boolean} [tail]
  * @property {ASTNode|null} [test]
