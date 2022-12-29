@@ -107,7 +107,7 @@ const Arborist = class {
 					estraverse.replace(rootNode, {
 						enter(node) {
 							try {
-								if (replacementNodeIds.includes(node.nodeId)) {
+								if (replacementNodeIds.includes(node.nodeId) && node.isMarked) {
 									if (node.src) {
 										try {
 											if (badReplacements.includes(node.src)) return;
@@ -123,7 +123,7 @@ const Arborist = class {
 									}
 									++changesCounter;
 									return that.markedForReplacement[node.nodeId];
-								} else if (that.markedForDeletion.includes(node.nodeId)) {
+								} else if (that.markedForDeletion.includes(node.nodeId) && node.isMarked) {
 									if (node.src) {
 										try {
 											const ns = that._parseSrcForLog(node.src);
