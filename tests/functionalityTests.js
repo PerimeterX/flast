@@ -26,6 +26,31 @@ module.exports = [
 	},
 	{
 		enabled: true,
+		name: 'Verify Available Imports',
+		description: 'Verify the expected functions and classes can be imported.',
+		run() {
+			const {resolve} = require('node:path');
+			const availableImports = [
+				'Arborist',
+				'ASTNode',
+				'ASTScope',
+				'estraverse',
+				'generateCode',
+				'generateFlatAST',
+				'parseCode',
+			];
+			function tryImporting(importName) {
+				const {[importName]: tempImport} = require(importSource);
+				return tempImport;
+			}
+			const importSource = resolve(__dirname + '/../src/index');
+			for (const importName of availableImports) {
+				assert.ok(tryImporting(importName), `Failed to import "${importName}" from ${importSource}`);
+			}
+		},
+	},
+	{
+		enabled: true,
 		name: 'Number of nodes',
 		description: 'Verify the code breakdown generates the expected nodes by checking the number of nodes for each expected type.',
 		run() {
