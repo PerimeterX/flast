@@ -1,4 +1,3 @@
-const estraverse = require('estraverse');
 const {generateCode, generateFlatAST,} = require(__dirname + '/flast');
 
 const Arborist = class {
@@ -10,10 +9,9 @@ const Arborist = class {
 		this.script                = '';
 		this.ast                   = [];
 		this.log                   = logFunc || (() => true);
-		this.maxLogLength          = 60;  // Max length of logged strings.
 		this.markedForDeletion     = [];  // Array of node ids.
-		this.markedForReplacement  = {};  // nodeId: replacementNode pairs.
 		this.appliedCounter        = 0;   // Track the number of times changes were applied.
+		this.replacements          = [];
 		if (typeof scriptOrFlatAstArr === 'string') {
 			this.script = scriptOrFlatAstArr;
 			this.ast = generateFlatAST(scriptOrFlatAstArr);
@@ -39,26 +37,11 @@ const Arborist = class {
 	}
 
 	/**
-	 * @param {string} src
-	 * @param {boolean} padEnd Pad end with spaces to the maxLogLength if true.
-	 * @returns {string} A parsed string fit for a log.
-	 * @private
-	 */
-	_parseSrcForLog(src, padEnd = false) {
-		const output = src
-			.replace(/\n/g, ' ')
-			.substring(0, this.maxLogLength)
-			.replace(/([\n\r])/g, ' ')
-			.replace(/\s{2,}/g, ' ');
-		return padEnd ? output.padEnd(this.maxLogLength, ' ') : output;
-	}
-
-	/**
 	 *
 	 * @returns {number} The number of changes to be applied.
 	 */
 	getNumberOfChanges() {
-		return Object.keys(this.markedForReplacement).length + this.markedForDeletion.length;
+		return this.replacements.length + this.markedForDeletion.length;
 	}
 
 	/**
@@ -70,7 +53,7 @@ const Arborist = class {
 	markNode(targetNode, replacementNode) {
 		if (!targetNode.isMarked) {
 			if (replacementNode) {  // Mark for replacement
-				this.markedForReplacement[targetNode.nodeId] = replacementNode;
+				this.replacements.push([targetNode, replacementNode]);
 				targetNode.isMarked = true;
 			} else {                // Mark for deletion
 				targetNode = this._getCorrectTargetForDeletion(targetNode);
@@ -79,7 +62,6 @@ const Arborist = class {
 					targetNode.isMarked = true;
 				}
 			}
-			this.ast = this.ast.filter(n => n.nodeId !== targetNode.nodeId);
 		}
 	}
 
@@ -92,61 +74,53 @@ const Arborist = class {
 		let changesCounter = 0;
 		try {
 			const that = this;
-			const replacementNodeIds = Object.keys(this.markedForReplacement).map(nid => parseInt(nid));
 			if (this.getNumberOfChanges() > 0) {
 				let rootNode = this.ast[0];
-				if (replacementNodeIds.includes(0)) {
+				const rootNodeReplacement = this.replacements.find(n => n[0].nodeId === 0);
+				if (rootNodeReplacement) {
 					++changesCounter;
 					this.log(`[+] Applying changes to the root node...`);
-					rootNode = this.markedForReplacement[0];
+					rootNode = rootNodeReplacement[1];
 				} else {
-					const removalLogCache = [];     // Prevents multiple printing of similar changes to the log
-					const replacementLogCache = [];
-					const badReplacements = [];
-					estraverse.replace(rootNode, {
-						enter(node) {
-							try {
-								if (replacementNodeIds.includes(node.nodeId) && node.isMarked) {
-									if (node.src) {
-										try {
-											if (badReplacements.includes(node.src)) return;
-											const nsrc = that._parseSrcForLog(node.src, true);
-											if (!replacementLogCache.includes(nsrc)) {
-												const tsrc = that._parseSrcForLog(generateCode(that.markedForReplacement[node.nodeId]));
-												that.log(`\t\t[+] Replacing\t${nsrc}\t--with--\t${tsrc}`, 2);
-												replacementLogCache.push(nsrc);
-											}
-										} catch {
-											that.log(`\t\t[+] Replacing ${that._parseSrcForLog('N/A')}\t--with\t${that._parseSrcForLog('N/A')}`);
-										}
-									}
+					for (const targetNodeId of this.markedForDeletion) {
+						try {
+							const targetNode = this.ast.find(n => n.nodeId === targetNodeId);
+							if (targetNode) {
+								const parent = targetNode.parentNode;
+								if (parent[targetNode.parentKey] === targetNode) {
+									parent[targetNode.parentKey] = undefined;
 									++changesCounter;
-									return that.markedForReplacement[node.nodeId];
-								} else if (that.markedForDeletion.includes(node.nodeId) && node.isMarked) {
-									if (node.src) {
-										try {
-											const ns = that._parseSrcForLog(node.src);
-											if (!removalLogCache.includes(ns)) {
-												that.log(`\t\t[+] Removing\t${ns}`, 2);
-												removalLogCache.push(ns);
-											}
-										} catch {
-											that.log(`\t\t[+] Removing\tN/A`, 2);
-										}
-									}
-									this.remove();
+								} else if (Array.isArray(parent[targetNode.parentKey])) {
+									const idx = parent[targetNode.parentKey].indexOf(targetNode);
+									parent[targetNode.parentKey][idx] = undefined;
+									parent[targetNode.parentKey] = parent[targetNode.parentKey].filter(n => n);
 									++changesCounter;
-									return null;
 								}
-							} catch (e) {
-								that.log(`[-] Unable to replace/delete node: ${e}`);
-								badReplacements.push(node.src);
 							}
-						},
-					});
+						} catch (e) {
+							that.log(`[-] Unable to delete node: ${e}`);
+						}
+					}
+					for (const [targetNode, replacementNode] of this.replacements) {
+						try {
+							if (targetNode) {
+								const parent = targetNode.parentNode;
+								if (parent[targetNode.parentKey] === targetNode) {
+									parent[targetNode.parentKey] = replacementNode;
+									++changesCounter;
+								} else if (Array.isArray(parent[targetNode.parentKey])) {
+									const idx = parent[targetNode.parentKey].indexOf(targetNode);
+									parent[targetNode.parentKey][idx] = replacementNode;
+									++changesCounter;
+								}
+							}
+						} catch (e) {
+							that.log(`[-] Unable to replace node: ${e}`);
+						}
+					}
 				}
 				if (changesCounter) {
-					this.markedForReplacement = {};
+					this.replacements.length = 0;
 					this.markedForDeletion.length = 0;
 					// If any of the changes made will break the script the next line will fail and the
 					// script will remain the same. If it doesn't break, the changes are valid and the script can be marked as modified.
