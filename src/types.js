@@ -72,8 +72,9 @@ class ASTNode {}
 /**
  * @typedef ASTScope
  * @extends Scope
- * @property {number} scopeId
+ * @property {ASTNode} block
  * @property {ASTScope[]} childScopes
+ * @property {number} scopeId
  */
 class ASTScope extends Scope {}
 
