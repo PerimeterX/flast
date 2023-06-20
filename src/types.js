@@ -9,6 +9,7 @@ const {Scope} = require('eslint-scope');
  * @property {boolean} [async]
  * @property {ASTNode|ASTNode[]} [body]
  * @property {ASTNode} [callee]
+ * @property {ASTNode[]} [cases]
  * @property {ASTNode[]} [childNodes]
  * @property {boolean} [computed]
  * @property {ASTNode} [consequent]
@@ -17,6 +18,7 @@ const {Scope} = require('eslint-scope');
  * @property {ASTNode[]} [declarations]
  * @property {ASTNode} [declNode]
  * @property {boolean} [delegate]
+ * @property {ASTNode} [discriminant]
  * @property {ASTNode[]} [elements]
  * @property {number} [end]
  * @property {ASTNode} [exported]
@@ -28,6 +30,7 @@ const {Scope} = require('eslint-scope');
  * @property {ASTNode} [imported]
  * @property {ASTNode} [init]
  * @property {boolean} [isMarked]
+ * @property {boolean} [isScopeBlock]
  * @property {ASTNode} [key]
  * @property {string} [kind]
  * @property {ASTNode} [label]
@@ -75,6 +78,7 @@ class ASTNode {}
  * @property {ASTNode} block
  * @property {ASTScope[]} childScopes
  * @property {number} scopeId
+ * @property {string} type
  */
 class ASTScope extends Scope {}
 
