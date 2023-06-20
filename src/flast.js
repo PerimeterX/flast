@@ -72,9 +72,9 @@ function generateFlatAST(inputCode, opts = {}) {
 	opts = { ...generateFlatASTDefaultOptions, ...opts };
 	const rootNode = generateRootNode(inputCode, opts);
 	const tree = extractNodesFromRoot(rootNode, opts);
-	const sm = initScopeManager(rootNode);
 	if (opts.detailed) {
-		for (let i = 0; i < tree.length; i++) injectScopeToNode(tree[i], sm);
+		const scopes = getAllScopes(rootNode);
+		for (let i = 0; i < tree.length; i++) injectScopeToNode(tree[i], scopes);
 	}
 	return tree;
 }
@@ -119,6 +119,7 @@ function extractNodesFromRoot(rootNode, opts) {
 	const tree = [];
 	let nodeId = 0;
 
+	// noinspection JSUnusedGlobalSymbols
 	estraverse.traverse(rootNode, {
 		/**
 		 * @param {ASTNode} node
@@ -129,8 +130,12 @@ function extractNodesFromRoot(rootNode, opts) {
 			node.nodeId = nodeId++;
 			node.childNodes = [];
 			node.parentNode = parentNode;
-			// Keep track of the node's lineage
 			node.parentKey = parentNode ? getParentKey(node) : '';
+			node.lineage = [...parentNode?.lineage || []];
+			if (parentNode) {
+				node.lineage.push(parentNode.nodeId);
+				parentNode.childNodes.push(node);
+			}
 			if (opts.includeSrc) Object.defineProperty(node, 'src', {
 				get() { return rootNode.srcClosure(node.range[0], node.range[1]);},
 			});
@@ -139,64 +144,137 @@ function extractNodesFromRoot(rootNode, opts) {
 	return tree;
 }
 
-function initScopeManager(rootNode) {
-	// noinspection JSCheckFunctionSignatures
-	return analyze(rootNode, {
+/**
+ * @param {ASTNode} node
+ * @param {ASTScope[]} scopes
+ */
+function injectScopeToNode(node, scopes) {
+	let parentNode = node.parentNode;
+	// Acquire scope
+	node.scope = matchScopeToNode(node, scopes);
+	if (node.type === 'Identifier' && !(!parentNode.computed && ['property', 'key'].includes(node.parentKey))) {
+		// Track references and declarations
+		// Prevent assigning declNode to member expression properties or object keys
+		const variables = node.scope.variables.filter(n => n.name === node.name);
+		if (node.parentKey === 'id' || (variables?.length && variables[0].identifiers.some(n => n === node))) {
+			node.references = node.references || [];
+		} else {
+			// Find declaration by finding the closest declaration of the same name.
+			let decls = [];
+			if (variables?.length) {
+				decls = variables.find(n => n.name === node.name)?.identifiers;
+			}
+			else {
+				const scopeReference = node.scope.references.find(n => n.identifier.name === node.name);
+				if (scopeReference) decls = scopeReference.resolved?.identifiers || [];
+			}
+			let declNode = decls[0];
+			if (decls.length > 1) {
+				let commonAncestors = maxSharedLength(declNode.lineage, node.lineage);
+				for (let i = 1; i < decls.length; i++) {
+					const ca = maxSharedLength(decls[i].lineage, node.lineage);
+					if (ca > commonAncestors) {
+						commonAncestors = ca;
+						declNode = decls[i];
+					}
+				}
+			}
+			if (declNode) {
+				declNode.references = declNode.references || [];
+				declNode.references.push(node);
+				node.declNode = declNode;
+			}
+		}
+	}
+}
+
+/**
+ * @param {number[]} targetArr
+ * @param {number[]} containedArr
+ * @return {number} Return the maximum length of shared numbers
+ */
+function maxSharedLength(targetArr, containedArr) {
+	let count = 0;
+	for (let i = 0; i < containedArr.length; i++) {
+		if (targetArr[i] !== containedArr[i]) break;
+		++count;
+	}
+	return count;
+}
+
+/**
+ * @param {ASTNode} node
+ * @param {ASTScope[]} scopes
+ * @return {Promise}
+ */
+async function injectScopeToNodeAsync(node, scopes) {
+	return new Promise((resolve, reject) => {
+		try {
+			injectScopeToNode(node, scopes);
+			resolve();
+		} catch (e) {
+			reject(e);
+		}
+	});
+}
+
+function getAllScopes(rootNode) {
+	const globalScope = analyze(rootNode, {
 		optimistic: true,
 		ecmaVersion,
-		sourceType});
+		sourceType}).acquireAll(rootNode)[0];
+	const allScopes = {};
+	const stack = [globalScope];
+	while (stack.length) {
+		let scope = stack.pop();
+		const scopeId = scope.block.nodeId;
+		scope.block.isScopeBlock = true;
+		if (!allScopes[scopeId]) {
+			allScopes[scopeId] = scope;
+			stack.push(...scope.childScopes);
+		}
+	}
+	rootNode.allScopes = allScopes;
+	return allScopes;
+}
+
+/**
+ * @param {ASTNode} node
+ * @param {ASTScope[]} allScopes
+ * @return {ASTScope}
+ */
+function matchScopeToNode(node, allScopes) {
+	if (node.lineage?.length) {
+		for (const nid of [...node.lineage].reverse()) {
+			if (allScopes[nid]) {
+				let scope = allScopes[nid];
+				if (scope.type.includes('-name') && scope?.childScopes?.length === 1) scope = scope.childScopes[0];
+				return scope;
+			}
+		}
+	}
+	return allScopes[0]; // Global scope - this should never be reached
 }
 
 /**
  *
- * @param {ASTNode} node
- * @param {ScopeManager} sm
+ * @param {string} inputCode
+ * @param {object} opts
+ * @return {Promise<ASTNode[]>}
  */
-function injectScopeToNode(node, sm) {
-	let parentNode = node.parentNode;
-	// Acquire scope
-	node.scope = sm.acquire(node);
-	if (!node.scope) node.scope = node.parentNode.scope;
-	else if (node.scope.type.includes('-name') && node.scope?.childScopes?.length === 1) node.scope = node.scope.childScopes[0];
-	if (node.scope.scopeId === undefined) node.scope.scopeId = node.scope.block.nodeId;
-	if (parentNode) {
-		node.lineage = [...parentNode?.lineage || [], parentNode.nodeId];
-		parentNode.childNodes.push(node);
-	}
-	if (node.type === 'Identifier') {
-		// Track references and declarations
-		// Prevent assigning declNode to member expression properties or object keys
-		if (!(['property', 'key'].includes(node.parentKey) && !parentNode.computed)) {
-			const variables = node.scope.variables.filter(n => n.name === node.name);
-			const isDeclaration = variables?.length && variables[0].identifiers.filter(n => n.nodeId === node.nodeId).length;
-			if (isDeclaration) node.references = node.references || [];
-			else if (!(node.parentKey === 'id' && node.parentNode.type === 'FunctionDeclaration'))  {
-				// Find declaration by finding the closest declaration of the same name.
-				let decls = [];
-				if (variables?.length) decls = variables.filter(n => n.name === node.name)[0].identifiers;
-				else {
-					const scopeReferences = node.scope.references.filter(n => n.identifier.name === node.name);
-					if (scopeReferences.length) decls = scopeReferences[0].resolved?.identifiers || [];
-				}
-				let declNode = decls[0];
-				if (decls.length > 1) {   // TODO: Defer setting declaration and references
-					let commonAncestors = node.lineage.reduce((t, c) => declNode.lineage?.includes(c) ? ++t : t, 0);
-					decls.slice(1).forEach(n => {
-						const ca = node.lineage.reduce((t, c) => n.lineage?.includes(c) ? ++t : t, 0);
-						if (ca > commonAncestors) {
-							commonAncestors = ca;
-							declNode = n;
-						}
-					});
-				}
-				if (declNode) {
-					if (!declNode.references) declNode.references = [];
-					declNode.references.push(node);
-					node.declNode = declNode;
-				}
-			}
+async function generateFlatASTAsync(inputCode, opts = {}) {
+	opts = { ...generateFlatASTDefaultOptions, ...opts };
+	const rootNode = generateRootNode(inputCode, opts);
+	const tree = extractNodesFromRoot(rootNode, opts);
+	const promises = [];
+	if (opts.detailed) {
+		const scopes = getAllScopes(rootNode);
+		for (let i = 0; i < tree.length; i++) {
+			promises.push(injectScopeToNodeAsync(tree[i], scopes));
 		}
+
 	}
+	return Promise.all(promises).then(() => tree);
 }
 
 module.exports = {
@@ -204,6 +282,9 @@ module.exports = {
 	extractNodesFromRoot,
 	generateCode,
 	generateFlatAST,
+	generateFlatASTAsync,
 	generateRootNode,
+	injectScopeToNode,
+	injectScopeToNodeAsync,
 	parseCode,
 };
