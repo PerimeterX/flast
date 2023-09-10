@@ -11,6 +11,7 @@ const {Scope} = require('eslint-scope');
  * @property {ASTNode} [callee]
  * @property {ASTNode[]} [cases]
  * @property {ASTNode[]} [childNodes]
+ * @property {Object[]} [comments]
  * @property {boolean} [computed]
  * @property {ASTNode} [consequent]
  * @property {string} [cooked]
@@ -35,6 +36,7 @@ const {Scope} = require('eslint-scope');
  * @property {ASTNode} [key]
  * @property {string} [kind]
  * @property {ASTNode} [label]
+ * @property {Object[]} [leadingComments]
  * @property {ASTNode} [left]
  * @property {number[]} [lineage] The nodeIds of all parent nodes
  * @property {ASTNode} [local]
@@ -68,6 +70,8 @@ const {Scope} = require('eslint-scope');
  * @property {ASTNode} [superClass]
  * @property {boolean} [tail]
  * @property {ASTNode} [test]
+ * @property {ASTNode} [tokens]
+ * @property {Object[]} [trailingComments]
  * @property {ASTNode} [update]
  * @property {ASTNode|string|number|boolean} [value]
  */

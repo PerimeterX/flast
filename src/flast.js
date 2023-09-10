@@ -1,5 +1,5 @@
 const {parse} = require('espree');
-const {generate} = require('escodegen');
+const {generate, attachComments} = require('escodegen');
 const estraverse = require('estraverse');
 const {analyze} = require('eslint-scope');
 
@@ -12,7 +12,9 @@ const sourceType = 'module';
  * @return {ASTNode} The root of the AST
  */
 function parseCode(inputCode, opts = {}) {
-	return parse(inputCode, {ecmaVersion, comment: true, range: true, ...opts});
+	const rootNode = parse(inputCode, {ecmaVersion, comment: true, range: true, ...opts});
+	if (rootNode.tokens) attachComments(rootNode, rootNode.comments, rootNode.tokens);
+	return rootNode;
 }
 
 const excludedParentKeys = [
@@ -51,6 +53,8 @@ const generateFlatASTDefaultOptions = {
 	// Options for the espree parser
 	parseOpts: {
 		sourceType,
+		comment: true,
+		tokens: true,
 	},
 };
 
