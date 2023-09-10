@@ -33,6 +33,7 @@ const Arborist = class {
 				(currentNode.parentNode.declarations.length === 1 ||
 					!currentNode.parentNode.declarations.filter(d => d.nodeId !== currentNode.nodeId && !d.isMarked).length)
 			)) currentNode = currentNode.parentNode;
+		if (['consequent', 'alternate'].includes(currentNode.parentKey)) currentNode.isEmpty = true;
 		return currentNode;
 	}
 
@@ -57,7 +58,8 @@ const Arborist = class {
 				targetNode.isMarked = true;
 			} else {                // Mark for deletion
 				targetNode = this._getCorrectTargetForDeletion(targetNode);
-				if (!targetNode.isMarked) {
+				if (targetNode.isEmpty) this.markNode(targetNode, {type: 'EmptyStatement'});
+				else if (!targetNode.isMarked) {
 					this.markedForDeletion.push(targetNode.nodeId);
 					targetNode.isMarked = true;
 				}
