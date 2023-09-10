@@ -82,7 +82,11 @@ const Arborist = class {
 				if (rootNodeReplacement) {
 					++changesCounter;
 					this.log(`[+] Applying changes to the root node...`);
+					const leadingComments =  rootNode.leadingComments || [];
+					const trailingComments = rootNode.trailingComments || [];
 					rootNode = rootNodeReplacement[1];
+					if (leadingComments.length) rootNode.leadingComments = (rootNode.leadingComments || []).concat(leadingComments);
+					if (trailingComments.length) rootNode.trailingComments = (rootNode.trailingComments || []).concat(trailingComments);
 				} else {
 					for (const targetNodeId of this.markedForDeletion) {
 						try {
@@ -91,11 +95,18 @@ const Arborist = class {
 								const parent = targetNode.parentNode;
 								if (parent[targetNode.parentKey] === targetNode) {
 									parent[targetNode.parentKey] = undefined;
+									const comments = (targetNode.leadingComments || []).concat(targetNode.trailingComments || []);
+									if (comments.length) parent.trailingComments = (parent.trailingComments || []).concat(comments);
 									++changesCounter;
 								} else if (Array.isArray(parent[targetNode.parentKey])) {
 									const idx = parent[targetNode.parentKey].indexOf(targetNode);
 									parent[targetNode.parentKey][idx] = undefined;
 									parent[targetNode.parentKey] = parent[targetNode.parentKey].filter(n => n);
+									const comments = (targetNode.leadingComments || []).concat(targetNode.trailingComments || []);
+									if (comments.length) {
+										const targetParent = idx > 0 ? parent[targetNode.parentKey][idx - 1] : parent[targetNode.parentKey].length > 1 ? parent[targetNode.parentKey][idx + 1] : parent;
+										targetParent.trailingComments = (targetParent.trailingComments || []).concat(comments);
+									}
 									++changesCounter;
 								}
 							}
@@ -109,10 +120,22 @@ const Arborist = class {
 								const parent = targetNode.parentNode;
 								if (parent[targetNode.parentKey] === targetNode) {
 									parent[targetNode.parentKey] = replacementNode;
+									const leadingComments =  targetNode.leadingComments || [];
+									const trailingComments = targetNode.trailingComments || [];
+									if (leadingComments.length) replacementNode.leadingComments = (replacementNode.leadingComments || []).concat(leadingComments);
+									if (trailingComments.length) replacementNode.trailingComments = (replacementNode.trailingComments || []).concat(trailingComments);
 									++changesCounter;
 								} else if (Array.isArray(parent[targetNode.parentKey])) {
 									const idx = parent[targetNode.parentKey].indexOf(targetNode);
 									parent[targetNode.parentKey][idx] = replacementNode;
+									const comments = (targetNode.leadingComments || []).concat(targetNode.trailingComments || []);
+									if (idx > 0) {
+										const commentsTarget = parent[targetNode.parentKey][idx - 1];
+										commentsTarget.trailingComments = (commentsTarget.trailingComments || []).concat(comments);
+									} else if (parent[targetNode.parentKey].length > 1) {
+										const commentsTarget = parent[targetNode.parentKey][idx + 1];
+										commentsTarget.leadingComments = (commentsTarget.leadingComments || []).concat(comments);
+									} else parent.trailingComments = (parent.trailingComments || []).concat(comments);
 									++changesCounter;
 								}
 							}
