@@ -1,5 +1,6 @@
 const assert = require('node:assert');
 const {generateFlatAST} = require(__dirname + '/../src/index');
+
 module.exports = [
 	{
 		enabled: true,
@@ -12,18 +13,19 @@ module.exports = [
   i;
 })();`;
 			const ast = generateFlatAST(code);
-			const testedScope = [...new Set(ast.map(n => n.scope))][1];
+			const testedScope = ast[0].allScopes[Object.keys(ast[0].allScopes).slice(-1)[0]];
 			const expectedParentScopeType = 'function-expression-name';
 			const expectedScopeType = 'function';
-			assert.equal(testedScope.type, expectedScopeType,
+			// ast.slice(-1)[0].type is the last identifier in the code and should have the expected scope type
+			assert.equal(ast.slice(-1)[0].scope.type, expectedScopeType,
 				`Unexpected scope`);
-			assert.equal(testedScope.upper.type, expectedParentScopeType,
+			assert.equal(testedScope.type, expectedParentScopeType,
 				`Tested scope is not the child of the correct scope`);
 		},
 	},
 	{
 		enabled: true,
-		name: 'Local variable declaration supercedes outer scope declaration',
+		name: 'Local variable declaration supersedes outer scope declaration',
 		description: 'Verify declNode references the local declaration correctly.',
 		run() {
 			const innerScopeVal = 'inner';
@@ -39,9 +41,9 @@ module.exports = [
 			const innerValResult = innerIdentifier.declNode.parentNode.init.value;
 			const outerValResult = outerIdentifier.declNode.parentNode.init.value;
 			assert.equal(innerValResult, innerScopeVal,
-				`Decleration node (inner scope) is incorrectly referenced.`);
+				`Declaration node (inner scope) is incorrectly referenced.`);
 			assert.equal(outerValResult, outerScopeVal,
-				`Decleration node (outer scope) is incorrectly referenced.`);
+				`Declaration node (outer scope) is incorrectly referenced.`);
 		},
 	},
 	{
