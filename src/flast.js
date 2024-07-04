@@ -140,7 +140,7 @@ function extractNodesFromRoot(rootNode, opts) {
 				node.lineage.push(parentNode.nodeId);
 				parentNode.childNodes.push(node);
 			}
-			if (opts.includeSrc) Object.defineProperty(node, 'src', {
+			if (opts.includeSrc && !node.src) Object.defineProperty(node, 'src', {
 				get() { return rootNode.srcClosure(node.range[0], node.range[1]);},
 			});
 		}
@@ -225,17 +225,23 @@ async function injectScopeToNodeAsync(node, scopes) {
 function getAllScopes(rootNode) {
 	const globalScope = analyze(rootNode, {
 		optimistic: true,
-		ecmaVersion,
+		ecmaVersion: (new Date()).getFullYear(),
 		sourceType}).acquireAll(rootNode)[0];
 	const allScopes = {};
 	const stack = [globalScope];
+	const seen = [];
 	while (stack.length) {
 		let scope = stack.pop();
+		if (seen.includes(scope)) continue;
+		seen.push(scope);
 		const scopeId = scope.block.nodeId;
 		scope.block.isScopeBlock = true;
 		if (!allScopes[scopeId]) {
 			allScopes[scopeId] = scope;
-			stack.push(...scope.childScopes);
+		}
+		stack.push(...scope.childScopes);
+		if (scope.type === 'module' && scope.upper?.type === 'global' && scope.variables?.length) {
+			for (const v of scope.variables) if (!scope.upper.variables.includes(v)) scope.upper.variables.push(v);
 		}
 	}
 	rootNode.allScopes = allScopes;
