@@ -1,4 +1,4 @@
-const {generateCode, generateFlatAST,} = require(__dirname + '/flast');
+const {generateCode, generateFlatAST,} = require('./flast');
 
 const Arborist = class {
 	/**
