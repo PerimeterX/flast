@@ -79,6 +79,7 @@ function generateFlatAST(inputCode, opts = {}) {
 	if (opts.detailed) {
 		const scopes = getAllScopes(rootNode);
 		for (let i = 0; i < tree.length; i++) injectScopeToNode(tree[i], scopes);
+		tree[0].allScopes = scopes;
 	}
 	return tree;
 }
