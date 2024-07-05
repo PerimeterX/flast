@@ -1,7 +1,8 @@
 const tests = {
-	Parsing: __dirname + '/parsingTests',
-	Functionality: __dirname + '/functionalityTests',
-	Arborist: __dirname + '/aboristTests',
+	Parsing: './parsingTests',
+	Functionality: './functionalityTests',
+	Arborist: './aboristTests',
+	Utils: './utilsTests',
 };
 
 let allTests = 0;

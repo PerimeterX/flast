@@ -3,6 +3,7 @@ const {Scope} = require('eslint-scope');
 /**
  * @typedef ASTNode
  * @property {string} type
+ * @property {object} [allScopes]
  * @property {ASTNode} [alternate]
  * @property {ASTNode} [argument]
  * @property {ASTNode[]} [arguments]

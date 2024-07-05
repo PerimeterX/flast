@@ -1,5 +1,5 @@
 const assert = require('node:assert');
-const {generateFlatAST} = require(__dirname + '/../src/index');
+const {generateFlatAST} = require('../src/index');
 
 module.exports = [
 	{

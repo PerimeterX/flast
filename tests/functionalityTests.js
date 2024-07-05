@@ -38,6 +38,7 @@ module.exports = [
 				'generateCode',
 				'generateFlatAST',
 				'parseCode',
+				'utils',
 			];
 			function tryImporting(importName) {
 				const {[importName]: tempImport} = require(importSource);
