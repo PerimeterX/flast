@@ -31,10 +31,10 @@ const logger = {
 		this.currentLogLevel = newLogLevel;
 	},
 
-	setLogLeveNone() {this.setLogLevel(this.logLevels.NONE);},
-	setLogLeveDebug() {this.setLogLevel(this.logLevels.DEBUG);},
-	setLogLeveLog() {this.setLogLevel(this.logLevels.LOG);},
-	setLogLeveError() {this.setLogLevel(this.logLevels.ERROR);},
+	setLogLevelNone() {this.setLogLevel(this.logLevels.NONE);},
+	setLogLevelDebug() {this.setLogLevel(this.logLevels.DEBUG);},
+	setLogLevelLog() {this.setLogLevel(this.logLevels.LOG);},
+	setLogLevelError() {this.setLogLevel(this.logLevels.ERROR);},
   
 	setLogFunc(newLogfunc) {
 		this.logFunc = newLogfunc;
