@@ -20,4 +20,4 @@ function treeModifier(filterFunc, modFunc, funcName) {
 	return func;
 }
 
-module.exports = treeModifier;
+export {treeModifier};

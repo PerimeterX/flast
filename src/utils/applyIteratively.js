@@ -1,6 +1,6 @@
-const {Arborist} = require('../arborist');
-const logger = require('./logger');
-const {createHash} = require('node:crypto');
+import {Arborist} from '../arborist.js';
+import {logger} from './logger.js';
+import {createHash} from 'node:crypto';
 
 const generateHash = str => createHash('sha256').update(str).digest('hex');
 
@@ -12,7 +12,7 @@ const generateHash = str => createHash('sha256').update(str).digest('hex');
  * @param {number?} maxIterations (optional) Stop the loop after this many iterations at most.
  * @return {string} The possibly modified script.
  */
-function runLoop(script, funcs, maxIterations = 500) {
+function applyIteratively(script, funcs, maxIterations = 500) {
 	let scriptSnapshot = '';
 	let currentIteration = 0;
 	let changesCounter = 0;
@@ -62,4 +62,4 @@ function runLoop(script, funcs, maxIterations = 500) {
 	return script;
 }
 
-module.exports = runLoop;
+export {applyIteratively};

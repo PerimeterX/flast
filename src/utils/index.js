@@ -1,5 +1,5 @@
-module.exports = {
-	applyIteratively: require('./applyIteratively'),
-	logger: require('./logger'),
-	treeModifier: require('./treeModifier'),
+export const utils = {
+	applyIteratively: (await import('./applyIteratively.js')).applyIteratively,
+	logger: (await import('./logger.js')).logger,
+	treeModifier: (await import('./treeModifier.js')).treeModifier,
 };

@@ -1,4 +1,4 @@
-const {Scope} = require('eslint-scope');
+import {Scope} from 'eslint-scope';
 
 /**
  * @typedef ASTNode
@@ -88,7 +88,7 @@ class ASTNode {}
  */
 class ASTScope extends Scope {}
 
-module.exports = {
+export {
 	ASTNode,
 	ASTScope,
 };

@@ -27,7 +27,7 @@ npm install flast
 ```
 
 ### Clone The Repo
-Requires Node 16 or newer.
+Requires Node 18 or newer.
 ```bash
 git clone git@github.com:PerimeterX/flast.git
 cd flast
@@ -165,7 +165,7 @@ const tree = [
 ### flAST
 
 ```javascript
-const {generateFlatAST, generateCode} = require('flast');
+import {generateFlatAST, generateCode} from 'flast';
 const ast = generateFlatAST(`console.log('flAST')`);
 const reconstructedCode = generateCode(ast[0]); // rebuild from root node
 ```
@@ -197,7 +197,7 @@ const generateCodeDefaultOptions = {
 ### Arborist
 
 ```javascript
-const {generateFlatAST, generateCode, Arborist} = require('flast');
+import {generateFlatAST, generateCode, Arborist} from 'flast';
 const ast = generateFlatAST(`console.log('Hello' + ' ' + 'there!');`);
 const replacements = {
   'Hello': 'General',
@@ -213,8 +213,8 @@ ast.filter(n => n.type === 'Literal' && replacements[n.value]).forEach(n => arbo
 const numberOfChangesMade = arborist.applyChanges();
 console.log(generateCode(arborist.ast[0]));  // console.log('General' + ' ' + 'Kenobi');
 ```
-The Arborist can be called with an extra argument - logFunc - which can be used to log
-inside the arborist. 
+The Arborist can be called with an extra argument - logFunc - which can be used to override the log
+function inside the arborist. 
 
 ## How to Contribute
 To contribute to this project see our [contribution guide](CONTRIBUTING.md)
