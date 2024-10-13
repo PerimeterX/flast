@@ -1,4 +1,4 @@
-const {generateCode, generateFlatAST,} = require('./flast');
+import {generateCode, generateFlatAST} from './flast.js';
 
 const Arborist = class {
 	/**
@@ -169,6 +169,6 @@ const Arborist = class {
 	}
 };
 
-module.exports = {
+export {
 	Arborist,
 };

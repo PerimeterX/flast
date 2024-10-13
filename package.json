@@ -7,7 +7,8 @@
   "scripts": {
     "lint": "eslint .",
     "prepare": "husky",
-    "test": "node tests/tester.js"
+    "test": "node --test",
+    "test:coverage": "node --test --experimental-test-coverage"
   },
   "repository": {
     "type": "git",

@@ -35,10 +35,10 @@ const logger = {
 	setLogLevelDebug() {this.setLogLevel(this.logLevels.DEBUG);},
 	setLogLevelLog() {this.setLogLevel(this.logLevels.LOG);},
 	setLogLevelError() {this.setLogLevel(this.logLevels.ERROR);},
-  
+
 	setLogFunc(newLogfunc) {
 		this.logFunc = newLogfunc;
 	},
 };
 
-module.exports = logger;
+export {logger};

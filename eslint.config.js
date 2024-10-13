@@ -13,7 +13,7 @@ const compat = new FlatCompat({
 });
 
 export default [{
-    ignores: ["**/*tmp*/", "**/*tmp*.*"],
+    ignores: ["**/*tmp*/", "**/*tmp*.*", "eslint.config.js", "node_modules/"],
 }, ...compat.extends("eslint:recommended"), {
     languageOptions: {
         globals: {
@@ -23,7 +23,7 @@ export default [{
         },
 
         ecmaVersion: "latest",
-        sourceType: "commonjs",
+        sourceType: "module",
     },
 
     rules: {

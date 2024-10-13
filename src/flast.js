@@ -1,7 +1,7 @@
-const {parse} = require('espree');
-const {generate, attachComments} = require('escodegen');
-const estraverse = require('estraverse');
-const {analyze} = require('eslint-scope');
+import {parse} from 'espree';
+import {generate, attachComments} from 'escodegen';
+import estraverse from 'estraverse';
+import {analyze} from 'eslint-scope';
 
 const ecmaVersion = 'latest';
 const sourceType = 'module';
@@ -288,7 +288,7 @@ async function generateFlatASTAsync(inputCode, opts = {}) {
 	return Promise.all(promises).then(() => tree);
 }
 
-module.exports = {
+export {
 	estraverse,
 	extractNodesFromRoot,
 	generateCode,
