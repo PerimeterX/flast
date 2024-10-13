@@ -19,7 +19,7 @@
     "javascript",
     "AST"
   ],
-  "author": "ben.baryo@perimeterx.com",
+  "author": "Ben Baryo (ben.baryo@humansecurity.com)",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/PerimeterX/flast/issues"
