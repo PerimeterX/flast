@@ -85,8 +85,8 @@ const Arborist = class {
 					const leadingComments =  rootNode.leadingComments || [];
 					const trailingComments = rootNode.trailingComments || [];
 					rootNode = rootNodeReplacement[1];
-					if (leadingComments.length) rootNode.leadingComments = (rootNode.leadingComments || []).concat(leadingComments);
-					if (trailingComments.length) rootNode.trailingComments = (rootNode.trailingComments || []).concat(trailingComments);
+					if (leadingComments.length && rootNode.leadingComments !== leadingComments) rootNode.leadingComments = (rootNode.leadingComments || []).concat(leadingComments);
+					if (trailingComments.length && rootNode.trailingComments !== trailingComments) rootNode.trailingComments = (rootNode.trailingComments || []).concat(trailingComments);
 				} else {
 					for (const targetNodeId of this.markedForDeletion) {
 						try {
