@@ -111,4 +111,25 @@ describe('Arborist tests', () => {
 		arborist.applyChanges();
 		assert.equal(arborist.script, code, 'Invalid changes were applied.');
 	});
+	it(`Verify comments aren't duplicated when replacing the root node`, () => {
+		const code = `//comment1\nconst a = 1, b = 2;`;
+		const expected = `//comment1\nconst a = 1;\nconst b = 2;`;
+		const arb = new Arborist(code);
+		const decls = [];
+		arb.ast.forEach(n => {
+			if (n.type === 'VariableDeclarator') {
+				decls.push({
+					type: 'VariableDeclaration',
+					kind: 'const',
+					declarations: [n],
+				});
+			}
+		});
+		arb.markNode(arb.ast[0], {
+			...arb.ast[0],
+			body: decls,
+		});
+		arb.applyChanges();
+		assert.equal(arb.script, expected);
+	});
 });
