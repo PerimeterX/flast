@@ -26,14 +26,15 @@ const Arborist = class {
 	 * @return {ASTNode}
 	 */
 	_getCorrectTargetForDeletion(startNode) {
+		const relevantTypes = ['ExpressionStatement', 'UnaryExpression', 'UpdateExpression'];
+		const relevantClauses = ['consequent', 'alternate'];
 		let currentNode = startNode;
-		while (
-			['ExpressionStatement', 'UnaryExpression', 'UpdateExpression'].includes(currentNode?.parentNode?.type) ||
+		while (relevantTypes.includes(currentNode?.parentNode?.type) ||
 			(currentNode.parentNode.type === 'VariableDeclaration' &&
 				(currentNode.parentNode.declarations.length === 1 ||
-					!currentNode.parentNode.declarations.filter(d => d.nodeId !== currentNode.nodeId && !d.isMarked).length)
+					!currentNode.parentNode.declarations.filter(d => d !== currentNode && !d.isMarked).length)
 			)) currentNode = currentNode.parentNode;
-		if (['consequent', 'alternate'].includes(currentNode.parentKey)) currentNode.isEmpty = true;
+		if (relevantClauses.includes(currentNode.parentKey)) currentNode.isEmpty = true;
 		return currentNode;
 	}
 
@@ -90,7 +91,8 @@ const Arborist = class {
 				} else {
 					for (const targetNodeId of this.markedForDeletion) {
 						try {
-							const targetNode = this.ast.find(n => n.nodeId === targetNodeId);
+							let targetNode = this.ast[targetNodeId];
+							targetNode = targetNode.nodeId === targetNodeId ? targetNode : this.ast.find(n => n.nodeId === targetNodeId);
 							if (targetNode) {
 								const parent = targetNode.parentNode;
 								if (parent[targetNode.parentKey] === targetNode) {
