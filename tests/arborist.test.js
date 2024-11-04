@@ -132,4 +132,28 @@ describe('Arborist tests', () => {
 		arb.applyChanges();
 		assert.equal(arb.script, expected);
 	});
+	it.skip(`FIX: Verify comments are kept when replacing a node`, () => {
+		const code = `
+// comment1
+const a = 1;
+
+// comment2
+let b = 2;
+
+// comment3
+const c = 3;`;
+		const expected = `// comment1\nvar a = 1;\n// comment2\nlet b = 2;\n// comment3\nvar c = 3;`;
+		const arb = new Arborist(code);
+		arb.ast.forEach(n => {
+			if (n.type === 'VariableDeclaration'
+					&& n.kind === 'const') {
+				arb.markNode(n, {
+					...n,
+					kind: 'var',
+				});
+			}
+		});
+		arb.applyChanges();
+		assert.equal(arb.script, expected);
+	});
 });
