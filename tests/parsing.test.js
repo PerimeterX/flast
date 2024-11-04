@@ -1,6 +1,6 @@
 import assert from 'node:assert';
 import {describe, it} from 'node:test';
-import {generateFlatAST} from '../src/index.js';
+import {generateFlatAST, generateCode} from '../src/index.js';
 
 describe('Parsing tests', () => {
 	it('Verify the function-expression-name scope is always replaced with its child scope', () => {
@@ -44,5 +44,15 @@ describe('Parsing tests', () => {
 		const variableReferencesFound = !!varId.references?.length;
 		assert.ok(!functionReferencesFound, `References to a function were incorrectly found`);
 		assert.ok(!variableReferencesFound, `References to a variable were incorrectly found`);
+	});
+	it(`Verify proper handling of class properties`, () => {
+		const code = `class a {
+  static b = 1;
+  #c = 2;
+}`;
+		const expected = code;
+		const ast = generateFlatAST(code);
+		const result = generateCode(ast[0]);
+		assert.strictEqual(result, expected);
 	});
 });
