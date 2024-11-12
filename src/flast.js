@@ -19,7 +19,7 @@ function parseCode(inputCode, opts = {}) {
 
 const excludedParentKeys = [
 	'type', 'start', 'end', 'range', 'sourceType', 'comments', 'srcClosure', 'nodeId',
-	'childNodes', 'parentNode', 'parentKey', 'scope',
+	'childNodes', 'parentNode', 'parentKey', 'scope', 'typeMap', 'lineage', 'allScopes',
 ];
 
 /**
@@ -123,6 +123,7 @@ function extractNodesFromRoot(rootNode, opts) {
 	opts = { ...generateFlatASTDefaultOptions, ...opts };
 	const tree = [];
 	let nodeId = 0;
+	const typeMap = {};
 
 	// noinspection JSUnusedGlobalSymbols
 	estraverse.traverse(rootNode, {
@@ -133,6 +134,8 @@ function extractNodesFromRoot(rootNode, opts) {
 		enter(node, parentNode) {
 			tree.push(node);
 			node.nodeId = nodeId++;
+			if (!typeMap[node.type]) typeMap[node.type] = [node];
+			else typeMap[node.type].push(node);
 			node.childNodes = [];
 			node.parentNode = parentNode;
 			node.parentKey = parentNode ? getParentKey(node) : '';
@@ -146,6 +149,7 @@ function extractNodesFromRoot(rootNode, opts) {
 			});
 		}
 	});
+	if (tree?.length) tree[0].typeMap = typeMap;
 	return tree;
 }
 
