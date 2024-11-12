@@ -73,6 +73,7 @@ import {Scope} from 'eslint-scope';
  * @property {ASTNode} [test]
  * @property {ASTNode} [tokens]
  * @property {Object[]} [trailingComments]
+ * @property {Object} [typeMap]
  * @property {ASTNode} [update]
  * @property {ASTNode|string|number|boolean} [value]
  */

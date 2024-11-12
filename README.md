@@ -41,7 +41,7 @@ npm install
 - Tracks scope and connects each declaration to its references.  
   See [eslint-scope](https://github.com/eslint/eslint-scope) for more info on the scopes used.
 - Adds a unique id to each node to simplify tracking and understanding relations between nodes.
-- Maps the types to the node ids for easier access.
+- Maps the types to the nodes for easier access.
 - <u>Arborist</u> - marks nodes for replacement or deletion and applies all changes in a single iteration over the tree.
 
 ### flAST Data Structure

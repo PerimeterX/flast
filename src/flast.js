@@ -134,8 +134,8 @@ function extractNodesFromRoot(rootNode, opts) {
 		enter(node, parentNode) {
 			tree.push(node);
 			node.nodeId = nodeId++;
-			if (!typeMap[node.type]) typeMap[node.type] = [node.nodeId];
-			else typeMap[node.type].push(node.nodeId);
+			if (!typeMap[node.type]) typeMap[node.type] = [node];
+			else typeMap[node.type].push(node);
 			node.childNodes = [];
 			node.parentNode = parentNode;
 			node.parentKey = parentNode ? getParentKey(node) : '';

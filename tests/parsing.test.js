@@ -60,16 +60,16 @@ describe('Parsing tests', () => {
   static b = 1;
   #c = 2;
 }`;
-		const expected = {
-			Program: [0],
-			ClassDeclaration: [1],
-			Identifier: [2, 5],
-			ClassBody: [3],
-			PropertyDefinition: [4, 7],
-			Literal: [6, 9],
-			PrivateIdentifier: [8],
-		};
 		const ast = generateFlatAST(code);
+		const expected = {
+			Program: [ast[0]],
+			ClassDeclaration: [ast[1]],
+			Identifier: [ast[2], ast[5]],
+			ClassBody: [ast[3]],
+			PropertyDefinition: [ast[4], ast[7]],
+			Literal: [ast[6], ast[9]],
+			PrivateIdentifier: [ast[8]],
+		};
 		const result = ast[0].typeMap;
 		assert.deepEqual(result, expected);
 	});
