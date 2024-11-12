@@ -55,4 +55,22 @@ describe('Parsing tests', () => {
 		const result = generateCode(ast[0]);
 		assert.strictEqual(result, expected);
 	});
+	it(`Verify the type map is generated accurately`, () => {
+		const code = `class a {
+  static b = 1;
+  #c = 2;
+}`;
+		const expected = {
+			Program: [0],
+			ClassDeclaration: [1],
+			Identifier: [2, 5],
+			ClassBody: [3],
+			PropertyDefinition: [4, 7],
+			Literal: [6, 9],
+			PrivateIdentifier: [8],
+		};
+		const ast = generateFlatAST(code);
+		const result = ast[0].typeMap;
+		assert.deepEqual(result, expected);
+	});
 });
