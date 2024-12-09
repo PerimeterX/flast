@@ -1,7 +1,8 @@
 import {parse} from 'espree';
-import {generate, attachComments} from 'escodegen';
 import estraverse from 'estraverse';
 import {analyze} from 'eslint-scope';
+import {logger} from './utils/logger.js';
+import {generate, attachComments} from 'escodegen';
 
 const ecmaVersion = 'latest';
 const sourceType = 'module';
@@ -74,12 +75,15 @@ function createSrcClosure(src) {
  */
 function generateFlatAST(inputCode, opts = {}) {
 	opts = { ...generateFlatASTDefaultOptions, ...opts };
+	let tree = [];
 	const rootNode = generateRootNode(inputCode, opts);
-	const tree = extractNodesFromRoot(rootNode, opts);
-	if (opts.detailed) {
-		const scopes = getAllScopes(rootNode);
-		for (let i = 0; i < tree.length; i++) injectScopeToNode(tree[i], scopes);
-		tree[0].allScopes = scopes;
+	if (rootNode) {
+		tree = extractNodesFromRoot(rootNode, opts);
+		if (opts.detailed) {
+			const scopes = getAllScopes(rootNode);
+			for (let i = 0; i < tree.length; i++) injectScopeToNode(tree[i], scopes);
+			tree[0].allScopes = scopes;
+		}
 	}
 	return tree;
 }
@@ -115,6 +119,7 @@ function generateRootNode(inputCode, opts = {}) {
 		if (opts.includeSrc) rootNode.srcClosure = createSrcClosure(inputCode);
 	} catch (e) {
 		if (opts.alernateSourceTypeOnFailure && e.message.includes('in strict mode')) rootNode = parseCode(inputCode, {...parseOpts, sourceType: 'script'});
+		else logger.debug(e);
 	}
 	return rootNode;
 }
@@ -279,15 +284,17 @@ function matchScopeToNode(node, allScopes) {
  */
 async function generateFlatASTAsync(inputCode, opts = {}) {
 	opts = { ...generateFlatASTDefaultOptions, ...opts };
-	const rootNode = generateRootNode(inputCode, opts);
-	const tree = extractNodesFromRoot(rootNode, opts);
+	let tree = [];
 	const promises = [];
-	if (opts.detailed) {
-		const scopes = getAllScopes(rootNode);
-		for (let i = 0; i < tree.length; i++) {
-			promises.push(injectScopeToNodeAsync(tree[i], scopes));
+	const rootNode = generateRootNode(inputCode, opts);
+	if (rootNode) {
+		tree = extractNodesFromRoot(rootNode, opts);
+		if (opts.detailed) {
+			const scopes = getAllScopes(rootNode);
+			for (let i = 0; i < tree.length; i++) {
+				promises.push(injectScopeToNodeAsync(tree[i], scopes));
+			}
 		}
-
 	}
 	return Promise.all(promises).then(() => tree);
 }

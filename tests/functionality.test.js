@@ -117,4 +117,15 @@ describe('Functionality tests', () => {
 		assert.equal(unparsedAst.length, 0, `Script was not parsed.${unparsedError ? 'Error: ' + unparsedError : ''}`);
 		assert.ok(parsedAst.length, `Script was not parsed.${parsedError ? 'Error: ' + parsedError : ''}`);
 	});
+	it(`Verify generateFlatAST doesn't throw an exception for invalid code`, () => {
+		const code = `return a;`;
+		let result;
+		const expectedResult = [];
+		try {
+			result = generateFlatAST(code, {alernateSourceTypeOnFailure: false});
+		} catch (e) {
+			result = e.message;
+		}
+		assert.deepStrictEqual(result, expectedResult);
+	});
 });
