@@ -19,30 +19,9 @@ function parseCode(inputCode, opts = {}) {
 }
 
 const excludedParentKeys = [
-	'type', 'start', 'end', 'range', 'sourceType', 'comments', 'srcClosure', 'nodeId',
-	'childNodes', 'parentNode', 'parentKey', 'scope', 'typeMap', 'lineage', 'allScopes',
+	'type', 'start', 'end', 'range', 'sourceType', 'comments', 'srcClosure', 'nodeId', 'leadingComments', 'trailingComments',
+	'childNodes', 'parentNode', 'parentKey', 'scope', 'typeMap', 'lineage', 'allScopes', 'tokens',
 ];
-
-/**
- * Return the key the child node is assigned in the parent node if applicable; null otherwise.
- * @param {ASTNode} node
- * @returns {string|null}
- */
-function getParentKey(node) {
-	if (node.parentNode) {
-		const keys = Object.keys(node.parentNode);
-		for (let i = 0; i < keys.length; i++) {
-			if (excludedParentKeys.includes(keys[i])) continue;
-			if (node.parentNode[keys[i]] === node) return keys[i];
-			if (Array.isArray(node.parentNode[keys[i]])) {
-				for (let j = 0; j < node.parentNode[keys[i]]?.length; j++) {
-					if (node.parentNode[keys[i]][j] === node) return keys[i];
-				}
-			}
-		}
-	}
-	return null;
-}
 
 const generateFlatASTDefaultOptions = {
 	// If false, do not include any scope details
@@ -126,36 +105,51 @@ function generateRootNode(inputCode, opts = {}) {
 
 function extractNodesFromRoot(rootNode, opts) {
 	opts = { ...generateFlatASTDefaultOptions, ...opts };
-	const tree = [];
 	let nodeId = 0;
 	const typeMap = {};
-
-	// noinspection JSUnusedGlobalSymbols
-	estraverse.traverse(rootNode, {
-		/**
-		 * @param {ASTNode} node
-		 * @param {ASTNode} parentNode
-		 */
-		enter(node, parentNode) {
-			tree.push(node);
-			node.nodeId = nodeId++;
-			if (!typeMap[node.type]) typeMap[node.type] = [node];
-			else typeMap[node.type].push(node);
-			node.childNodes = [];
-			node.parentNode = parentNode;
-			node.parentKey = parentNode ? getParentKey(node) : '';
-			node.lineage = [...parentNode?.lineage || []];
-			if (parentNode) {
-				node.lineage.push(parentNode.nodeId);
-				parentNode.childNodes.push(node);
+	const allNodes = [];
+	const stack = [rootNode];
+	while (stack.length) {
+		const node = stack.shift();
+		node.childNodes = node.childNodes || [];
+		const childrenLoc = {};  // Store the location of child nodes to sort them by order
+		if (!node.parentKey) node.parentKey = '';
+		const keys = Object.keys(node);
+		for (let i = 0; i < keys.length; i++) {
+			const key = keys[i];
+			if (excludedParentKeys.includes(key)) continue;
+			const content = node[key];
+			if (content && typeof content === 'object') {
+				if (Array.isArray(content)) {
+					for (let j = 0; j < content.length; j++) {
+						const childNode = content[j];
+						childNode.parentNode = node;
+						childNode.parentKey = key;
+						childrenLoc[childNode.start] = childNode;
+					}
+				} else {
+					content.parentNode = node;
+					content.parentKey = key;
+					childrenLoc[content.start] = content;
+				}
 			}
-			if (opts.includeSrc && !node.src) Object.defineProperty(node, 'src', {
-				get() { return rootNode.srcClosure(node.range[0], node.range[1]);},
-			});
 		}
-	});
-	if (tree?.length) tree[0].typeMap = typeMap;
-	return tree;
+		stack.unshift(...Object.values(childrenLoc));
+		allNodes.push(node);
+		node.nodeId = nodeId++;
+		if (!typeMap[node.type]) typeMap[node.type] = [node];
+		else typeMap[node.type].push(node);
+		node.lineage = [...node.parentNode?.lineage || []];
+		if (node.parentNode) {
+			node.lineage.push(node.parentNode.nodeId);
+			node.parentNode.childNodes.push(node);
+		}
+		if (opts.includeSrc && !node.src) Object.defineProperty(node, 'src', {
+			get() { return rootNode.srcClosure(node.start, node.end);},
+		});
+	}
+	if (allNodes?.length) allNodes[0].typeMap = typeMap;
+	return allNodes;
 }
 
 /**
