@@ -53,16 +53,11 @@ function createSrcClosure(src) {
  * @return {ASTNode[]} An array of flattened AST
  */
 function generateFlatAST(inputCode, opts = {}) {
-	opts = { ...generateFlatASTDefaultOptions, ...opts };
+	opts = {...generateFlatASTDefaultOptions, ...opts};
 	let tree = [];
 	const rootNode = generateRootNode(inputCode, opts);
 	if (rootNode) {
 		tree = extractNodesFromRoot(rootNode, opts);
-		if (opts.detailed) {
-			const scopes = getAllScopes(rootNode);
-			for (let i = 0; i < tree.length; i++) injectScopeToNode(tree[i], scopes);
-			tree[0].allScopes = scopes;
-		}
 	}
 	return tree;
 }
@@ -90,7 +85,7 @@ function generateCode(rootNode, opts = {}) {
 }
 
 function generateRootNode(inputCode, opts = {}) {
-	opts = { ...generateFlatASTDefaultOptions, ...opts };
+	opts = {...generateFlatASTDefaultOptions, ...opts};
 	const parseOpts = opts.parseOpts || {};
 	let rootNode;
 	try {
@@ -104,10 +99,11 @@ function generateRootNode(inputCode, opts = {}) {
 }
 
 function extractNodesFromRoot(rootNode, opts) {
-	opts = { ...generateFlatASTDefaultOptions, ...opts };
+	opts = {...generateFlatASTDefaultOptions, ...opts};
 	let nodeId = 0;
 	const typeMap = {};
 	const allNodes = [];
+	const scopes = opts.detailed ? getAllScopes(rootNode) : {};
 	const stack = [rootNode];
 	while (stack.length) {
 		const node = stack.shift();
@@ -141,14 +137,16 @@ function extractNodesFromRoot(rootNode, opts) {
 		else typeMap[node.type].push(node);
 		node.lineage = [...node.parentNode?.lineage || []];
 		if (node.parentNode) {
-			node.lineage.push(node.parentNode.nodeId);
-			node.parentNode.childNodes.push(node);
+			node.lineage.push(node.parentNode.start);
 		}
+		node.childNodes.push(...Object.values(childrenLoc));
 		if (opts.includeSrc && !node.src) Object.defineProperty(node, 'src', {
 			get() { return rootNode.srcClosure(node.start, node.end);},
 		});
+		if (opts.detailed) injectScopeToNode(node, scopes);
 	}
 	if (allNodes?.length) allNodes[0].typeMap = typeMap;
+	if (opts.detailed) allNodes[0].allScopes = scopes;
 	return allNodes;
 }
 
@@ -238,7 +236,7 @@ function getAllScopes(rootNode) {
 		let scope = stack.pop();
 		if (seen.includes(scope)) continue;
 		seen.push(scope);
-		const scopeId = scope.block.nodeId;
+		const scopeId = scope.block.start;
 		scope.block.isScopeBlock = true;
 		if (!allScopes[scopeId]) {
 			allScopes[scopeId] = scope;
