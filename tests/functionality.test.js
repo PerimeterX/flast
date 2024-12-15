@@ -21,7 +21,7 @@ describe('Functionality tests', () => {
 		expectedBreakdown.forEach(node => {
 			const parsedNode = ast[node.nodeId];
 			for (const [k, v] of Object.entries(node)) {
-				assert.equal(v, parsedNode[k], `Node #${parsedNode[k]} parsed wrong on key '${k}'`);
+				assert.equal(v, parsedNode[k], `Node #${node.nodeId} parsed wrong on key '${k}'`);
 			}
 		});
 	});
@@ -30,7 +30,6 @@ describe('Functionality tests', () => {
 			'Arborist',
 			'ASTNode',
 			'ASTScope',
-			'estraverse',
 			'generateCode',
 			'generateFlatAST',
 			'parseCode',

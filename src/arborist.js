@@ -1,17 +1,17 @@
+import {logger} from './utils/logger.js';
 import {generateCode, generateFlatAST} from './flast.js';
 
 const Arborist = class {
 	/**
 	 * @param {string|ASTNode[]} scriptOrFlatAstArr - the target script or a flat AST array
-	 * @param {Function} logFunc - (optional) Logging function
 	 */
-	constructor(scriptOrFlatAstArr, logFunc = null) {
+	constructor(scriptOrFlatAstArr) {
 		this.script                = '';
 		this.ast                   = [];
-		this.log                   = logFunc || (() => true);
 		this.markedForDeletion     = [];  // Array of node ids.
 		this.appliedCounter        = 0;   // Track the number of times changes were applied.
 		this.replacements          = [];
+		this.logger = logger;
 		if (typeof scriptOrFlatAstArr === 'string') {
 			this.script = scriptOrFlatAstArr;
 			this.ast = generateFlatAST(scriptOrFlatAstArr);
@@ -32,14 +32,13 @@ const Arborist = class {
 		while (relevantTypes.includes(currentNode?.parentNode?.type) ||
 			(currentNode.parentNode.type === 'VariableDeclaration' &&
 				(currentNode.parentNode.declarations.length === 1 ||
-					!currentNode.parentNode.declarations.filter(d => d !== currentNode && !d.isMarked).length)
+					!currentNode.parentNode.declarations.some(d => d !== currentNode && !d.isMarked))
 			)) currentNode = currentNode.parentNode;
 		if (relevantClauses.includes(currentNode.parentKey)) currentNode.isEmpty = true;
 		return currentNode;
 	}
 
 	/**
-	 *
 	 * @returns {number} The number of changes to be applied.
 	 */
 	getNumberOfChanges() {
@@ -49,8 +48,8 @@ const Arborist = class {
 	/**
 	 * Replace the target node with another node or delete the target node completely, depending on whether a replacement
 	 * node is provided.
-	 * @param targetNode The node to replace or remove.
-	 * @param replacementNode If exists, replace the target node with this node.
+	 * @param {ASTNode} targetNode The node to replace or remove.
+	 * @param {object|ASTNode} replacementNode If exists, replace the target node with this node.
 	 */
 	markNode(targetNode, replacementNode) {
 		if (!targetNode.isMarked) {
@@ -76,34 +75,33 @@ const Arborist = class {
 	applyChanges() {
 		let changesCounter = 0;
 		try {
-			const that = this;
 			if (this.getNumberOfChanges() > 0) {
 				let rootNode = this.ast[0];
-				const rootNodeReplacement = this.replacements.find(n => n[0].nodeId === 0);
-				if (rootNodeReplacement) {
+				if (rootNode.isMarked) {
+					const rootNodeReplacement = this.replacements.find(n => n[0].nodeId === 0);
 					++changesCounter;
-					this.log(`[+] Applying changes to the root node...`);
+					this.logger.debug(`[+] Applying changes to the root node...`);
 					const leadingComments =  rootNode.leadingComments || [];
 					const trailingComments = rootNode.trailingComments || [];
 					rootNode = rootNodeReplacement[1];
 					if (leadingComments.length && rootNode.leadingComments !== leadingComments) rootNode.leadingComments = (rootNode.leadingComments || []).concat(leadingComments);
 					if (trailingComments.length && rootNode.trailingComments !== trailingComments) rootNode.trailingComments = (rootNode.trailingComments || []).concat(trailingComments);
 				} else {
-					for (const targetNodeId of this.markedForDeletion) {
+					for (let i = 0; i < this.markedForDeletion.length; i++) {
+						const targetNodeId = this.markedForDeletion[i];
 						try {
 							let targetNode = this.ast[targetNodeId];
 							targetNode = targetNode.nodeId === targetNodeId ? targetNode : this.ast.find(n => n.nodeId === targetNodeId);
 							if (targetNode) {
 								const parent = targetNode.parentNode;
 								if (parent[targetNode.parentKey] === targetNode) {
-									parent[targetNode.parentKey] = undefined;
+									delete parent[targetNode.parentKey];
 									const comments = (targetNode.leadingComments || []).concat(targetNode.trailingComments || []);
 									if (comments.length) parent.trailingComments = (parent.trailingComments || []).concat(comments);
 									++changesCounter;
 								} else if (Array.isArray(parent[targetNode.parentKey])) {
 									const idx = parent[targetNode.parentKey].indexOf(targetNode);
-									parent[targetNode.parentKey][idx] = undefined;
-									parent[targetNode.parentKey] = parent[targetNode.parentKey].filter(n => n);
+									parent[targetNode.parentKey].splice(idx, 1);
 									const comments = (targetNode.leadingComments || []).concat(targetNode.trailingComments || []);
 									if (comments.length) {
 										const targetParent = idx > 0 ? parent[targetNode.parentKey][idx - 1] : parent[targetNode.parentKey].length > 1 ? parent[targetNode.parentKey][idx + 1] : parent;
@@ -113,10 +111,11 @@ const Arborist = class {
 								}
 							}
 						} catch (e) {
-							that.log(`[-] Unable to delete node: ${e}`);
+							this.logger.debug(`[-] Unable to delete node: ${e}`);
 						}
 					}
-					for (const [targetNode, replacementNode] of this.replacements) {
+					for (let i = 0; i < this.replacements.length; i++) {
+						const [targetNode, replacementNode] = this.replacements[i];
 						try {
 							if (targetNode) {
 								const parent = targetNode.parentNode;
@@ -142,7 +141,7 @@ const Arborist = class {
 								}
 							}
 						} catch (e) {
-							that.log(`[-] Unable to replace node: ${e}`);
+							this.logger.debug(`[-] Unable to replace node: ${e}`);
 						}
 					}
 				}
@@ -158,13 +157,13 @@ const Arborist = class {
 						this.script = script;
 					}
 					else {
-						this.log(`[-] Modified script is invalid. Reverting ${changesCounter} changes...`);
+						this.logger.log(`[-] Modified script is invalid. Reverting ${changesCounter} changes...`);
 						changesCounter = 0;
 					}
 				}
 			}
 		} catch (e) {
-			this.log(`[-] Unable to apply changes to AST: ${e}`);
+			this.logger.log(`[-] Unable to apply changes to AST: ${e}`);
 		}
 		++this.appliedCounter;
 		return changesCounter;

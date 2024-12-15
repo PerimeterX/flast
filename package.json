@@ -28,8 +28,7 @@
   "dependencies": {
     "escodegen": "npm:@javascript-obfuscator/escodegen",
     "eslint-scope": "^8.2.0",
-    "espree": "^10.3.0",
-    "estraverse": "^5.3.0"
+    "espree": "^10.3.0"
   },
   "devDependencies": {
     "eslint": "^9.16.0",
