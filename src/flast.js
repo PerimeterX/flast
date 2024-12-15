@@ -5,6 +5,7 @@ import {logger} from './utils/logger.js';
 import {generate, attachComments} from 'escodegen';
 
 const ecmaVersion = 'latest';
+const currentYear = (new Date()).getFullYear();
 const sourceType = 'module';
 
 /**
@@ -84,6 +85,11 @@ function generateCode(rootNode, opts = {}) {
 	return generate(rootNode, { ...generateCodeDefaultOptions, ...opts });
 }
 
+/**
+ * @param {string} inputCode
+ * @param {object} [opts]
+ * @return {ASTNode}
+ */
 function generateRootNode(inputCode, opts = {}) {
 	opts = {...generateFlatASTDefaultOptions, ...opts};
 	const parseOpts = opts.parseOpts || {};
@@ -98,24 +104,34 @@ function generateRootNode(inputCode, opts = {}) {
 	return rootNode;
 }
 
+/**
+ * @param rootNode
+ * @param opts
+ * @return {ASTNode[]}
+ */
 function extractNodesFromRoot(rootNode, opts) {
 	opts = {...generateFlatASTDefaultOptions, ...opts};
 	let nodeId = 0;
 	const typeMap = {};
 	const allNodes = [];
 	const scopes = opts.detailed ? getAllScopes(rootNode) : {};
+
 	const stack = [rootNode];
 	while (stack.length) {
 		const node = stack.shift();
+		if (node.nodeId) continue;
 		node.childNodes = node.childNodes || [];
 		const childrenLoc = {};  // Store the location of child nodes to sort them by order
-		if (!node.parentKey) node.parentKey = '';
+		node.parentKey = node.parentKey || '';	// Make sure parentKey exists
+		// Iterate over all keys of the node to find child nodes
 		const keys = Object.keys(node);
 		for (let i = 0; i < keys.length; i++) {
 			const key = keys[i];
 			if (excludedParentKeys.includes(key)) continue;
 			const content = node[key];
 			if (content && typeof content === 'object') {
+				// Sort each child node by its start position
+				// and set the parentNode and parentKey attributes
 				if (Array.isArray(content)) {
 					for (let j = 0; j < content.length; j++) {
 						const childNode = content[j];
@@ -130,23 +146,25 @@ function extractNodesFromRoot(rootNode, opts) {
 				}
 			}
 		}
+		// Add the child nodes to top of the stack and populate the node's childNodes array
 		stack.unshift(...Object.values(childrenLoc));
+		node.childNodes.push(...Object.values(childrenLoc));
+
 		allNodes.push(node);
 		node.nodeId = nodeId++;
-		if (!typeMap[node.type]) typeMap[node.type] = [node];
-		else typeMap[node.type].push(node);
+		typeMap[node.type] = typeMap[node.type] || [];
+		typeMap[node.type].push(node);
 		node.lineage = [...node.parentNode?.lineage || []];
 		if (node.parentNode) {
 			node.lineage.push(node.parentNode.start);
 		}
-		node.childNodes.push(...Object.values(childrenLoc));
+		// Add a getter for the node's source code
 		if (opts.includeSrc && !node.src) Object.defineProperty(node, 'src', {
-			get() { return rootNode.srcClosure(node.start, node.end);},
+			get() {return rootNode.srcClosure(node.start, node.end);},
 		});
 		if (opts.detailed) injectScopeToNode(node, scopes);
 	}
 	if (allNodes?.length) allNodes[0].typeMap = typeMap;
-	if (opts.detailed) allNodes[0].allScopes = scopes;
 	return allNodes;
 }
 
@@ -161,18 +179,30 @@ function injectScopeToNode(node, scopes) {
 	if (node.type === 'Identifier' && !(!parentNode.computed && ['property', 'key'].includes(node.parentKey))) {
 		// Track references and declarations
 		// Prevent assigning declNode to member expression properties or object keys
-		const variables = node.scope.variables.filter(n => n.name === node.name);
-		if (node.parentKey === 'id' || (variables?.length && variables[0].identifiers.some(n => n === node))) {
+		const variables = [];
+		for (let i = 0; i < node.scope.variables.length; i++) {
+			if (node.scope.variables[i].name === node.name) variables.push(node.scope.variables[i]);
+		}
+		if (node.parentKey === 'id' || variables?.[0]?.identifiers?.includes(node)) {
 			node.references = node.references || [];
 		} else {
 			// Find declaration by finding the closest declaration of the same name.
 			let decls = [];
 			if (variables?.length) {
-				decls = variables.find(n => n.name === node.name)?.identifiers;
+				for (let i = 0; i < variables.length; i++) {
+					if (variables[i].name === node.name) {
+						decls = variables[i].identifiers || [];
+						break;
+					}
+				}
 			}
 			else {
-				const scopeReference = node.scope.references.find(n => n.identifier.name === node.name);
-				if (scopeReference) decls = scopeReference.resolved?.identifiers || [];
+				for (let i = 0; i < node.scope.references.length; i++) {
+					if (node.scope.references[i].identifier.name === node.name) {
+						decls = node.scope.references[i].resolved?.identifiers || [];
+						break;
+					}
+				}
 			}
 			let declNode = decls[0];
 			if (decls.length > 1) {
@@ -209,41 +239,29 @@ function maxSharedLength(targetArr, containedArr) {
 }
 
 /**
- * @param {ASTNode} node
- * @param {ASTScope[]} scopes
- * @return {Promise}
+ * @param {ASTNode} rootNode
+ * @return {{number: ASTScope}}
  */
-async function injectScopeToNodeAsync(node, scopes) {
-	return new Promise((resolve, reject) => {
-		try {
-			injectScopeToNode(node, scopes);
-			resolve();
-		} catch (e) {
-			reject(e);
-		}
-	});
-}
-
 function getAllScopes(rootNode) {
+	// noinspection JSCheckFunctionSignatures
 	const globalScope = analyze(rootNode, {
 		optimistic: true,
-		ecmaVersion: (new Date()).getFullYear(),
+		ecmaVersion: currentYear,
 		sourceType}).acquireAll(rootNode)[0];
 	const allScopes = {};
 	const stack = [globalScope];
-	const seen = [];
 	while (stack.length) {
-		let scope = stack.pop();
-		if (seen.includes(scope)) continue;
-		seen.push(scope);
+		let scope = stack.shift();
 		const scopeId = scope.block.start;
 		scope.block.isScopeBlock = true;
-		if (!allScopes[scopeId]) {
-			allScopes[scopeId] = scope;
-		}
-		stack.push(...scope.childScopes);
-		if (scope.type === 'module' && scope.upper?.type === 'global' && scope.variables?.length) {
-			for (const v of scope.variables) if (!scope.upper.variables.includes(v)) scope.upper.variables.push(v);
+		allScopes[scopeId] = allScopes[scopeId] || scope;
+		stack.unshift(...scope.childScopes);
+		// A single global scope is enough, so if there are variables in a module scope, add them to the global scope
+		if (scope.type === 'module' && scope.upper === globalScope && scope.variables?.length) {
+			for (let i = 0; i < scope.variables.length; i++) {
+				const v = scope.variables[i];
+				if (!globalScope.variables.includes(v)) globalScope.variables.push(v);
+			}
 		}
 	}
 	rootNode.allScopes = allScopes;
@@ -256,39 +274,16 @@ function getAllScopes(rootNode) {
  * @return {ASTScope}
  */
 function matchScopeToNode(node, allScopes) {
-	if (node.lineage?.length) {
-		for (const nid of [...node.lineage].reverse()) {
-			if (allScopes[nid]) {
-				let scope = allScopes[nid];
-				if (scope.type.includes('-name') && scope?.childScopes?.length === 1) scope = scope.childScopes[0];
-				return scope;
-			}
-		}
+	let scopeBlock = node;
+	while (scopeBlock && !scopeBlock.isScopeBlock) {
+		scopeBlock = scopeBlock.parentNode;
 	}
-	return allScopes[0]; // Global scope - this should never be reached
-}
-
-/**
- *
- * @param {string} inputCode
- * @param {object} opts
- * @return {Promise<ASTNode[]>}
- */
-async function generateFlatASTAsync(inputCode, opts = {}) {
-	opts = { ...generateFlatASTDefaultOptions, ...opts };
-	let tree = [];
-	const promises = [];
-	const rootNode = generateRootNode(inputCode, opts);
-	if (rootNode) {
-		tree = extractNodesFromRoot(rootNode, opts);
-		if (opts.detailed) {
-			const scopes = getAllScopes(rootNode);
-			for (let i = 0; i < tree.length; i++) {
-				promises.push(injectScopeToNodeAsync(tree[i], scopes));
-			}
-		}
-	}
-	return Promise.all(promises).then(() => tree);
+	let scope;
+	if (scopeBlock) {
+		scope = allScopes[scopeBlock.start];
+		if (scope.type.includes('-name') && scope?.childScopes?.length === 1) scope = scope.childScopes[0];
+	} else scope = allScopes[0]; // Global scope - this should never be reached
+	return scope;
 }
 
 export {
@@ -296,9 +291,7 @@ export {
 	extractNodesFromRoot,
 	generateCode,
 	generateFlatAST,
-	generateFlatASTAsync,
 	generateRootNode,
 	injectScopeToNode,
-	injectScopeToNodeAsync,
 	parseCode,
 };
