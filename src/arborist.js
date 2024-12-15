@@ -39,7 +39,6 @@ const Arborist = class {
 	}
 
 	/**
-	 *
 	 * @returns {number} The number of changes to be applied.
 	 */
 	getNumberOfChanges() {
@@ -49,8 +48,8 @@ const Arborist = class {
 	/**
 	 * Replace the target node with another node or delete the target node completely, depending on whether a replacement
 	 * node is provided.
-	 * @param targetNode The node to replace or remove.
-	 * @param replacementNode If exists, replace the target node with this node.
+	 * @param {ASTNode} targetNode The node to replace or remove.
+	 * @param {object|ASTNode} replacementNode If exists, replace the target node with this node.
 	 */
 	markNode(targetNode, replacementNode) {
 		if (!targetNode.isMarked) {
