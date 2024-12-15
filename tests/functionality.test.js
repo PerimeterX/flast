@@ -30,7 +30,6 @@ describe('Functionality tests', () => {
 			'Arborist',
 			'ASTNode',
 			'ASTScope',
-			'estraverse',
 			'generateCode',
 			'generateFlatAST',
 			'parseCode',

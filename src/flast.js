@@ -1,5 +1,4 @@
 import {parse} from 'espree';
-import estraverse from 'estraverse';
 import {analyze} from 'eslint-scope';
 import {logger} from './utils/logger.js';
 import {generate, attachComments} from 'escodegen';
@@ -287,7 +286,6 @@ function matchScopeToNode(node, allScopes) {
 }
 
 export {
-	estraverse,
 	extractNodesFromRoot,
 	generateCode,
 	generateFlatAST,
