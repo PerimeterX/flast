@@ -23,11 +23,12 @@ function applyIteratively(script, funcs, maxIterations = 500) {
 		while (arborist.ast?.length && scriptSnapshot !== script && currentIteration < maxIterations) {
 			const iterationStartTime = Date.now();
 			scriptSnapshot = script;
-			// Mark each node with the script hash to distinguish cache of different scripts.
-			for (let i = 0; i < arborist.ast.length; i++) arborist.ast[i].scriptHash = scriptHash;
+
+			// Mark the root node with the script hash to distinguish cache of different scripts.
+			arborist.ast[0].scriptHash = scriptHash;
 			for (let i = 0; i <  funcs.length; i++) {
 				const func = funcs[i];
-				const funcStartTime = +new Date();
+				const funcStartTime = Date.now();
 				try {
 					logger.debug(`\t[!] Running ${func.name}...`);
 					arborist = func(arborist);
@@ -40,13 +41,13 @@ function applyIteratively(script, funcs, maxIterations = 500) {
 						arborist.applyChanges();
 						script = arborist.script;
 						scriptHash = generateHash(script);
-						for (let j = 0; j < arborist.ast.length; j++) arborist.ast[j].scriptHash = scriptHash;
+						arborist.ast[0].scriptHash = scriptHash;
 					}
 				} catch (e) {
 					logger.error(`[-] Error in ${func.name} (iteration #${iterationsCounter}): ${e}\n${e.stack}`);
 				} finally {
 					logger.debug(`\t\t[!] Running ${func.name} completed in ` +
-              `${((+new Date() - funcStartTime) / 1000).toFixed(3)} seconds`);
+              `${((Date.now() - funcStartTime) / 1000).toFixed(3)} seconds`);
 				}
 			}
 			++currentIteration;
