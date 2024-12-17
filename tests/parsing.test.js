@@ -15,7 +15,7 @@ describe('Parsing tests', () => {
 		const expectedScopeType = 'function';
 		// ast.slice(-1)[0].type is the last identifier in the code and should have the expected scope type
 		assert.equal(ast.slice(-1)[0].scope.type, expectedScopeType, `Unexpected scope`);
-		assert.equal(testedScope.type, expectedParentScopeType, `Tested scope is not the child of the correct scope`);
+		assert.equal(testedScope.upper.type, expectedParentScopeType, `Tested scope is not the child of the correct scope`);
 	});
 	it('Verify declNode references the local declaration correctly', () => {
 		const innerScopeVal = 'inner';
@@ -72,5 +72,36 @@ describe('Parsing tests', () => {
 		};
 		const result = ast[0].typeMap;
 		assert.deepEqual(result, expected);
+	});
+	it(`Verify node relations are parsed correctly`, () => {
+		const code = `for (var i = 0; i < 10; i++);\nfor (var i = 0; i < 10; i++);`;
+		try {
+			generateFlatAST(code);
+		} catch (e) {
+			assert.fail(`Parsing failed: ${e.message}`);
+		}
+	});
+	it(`Verify the module scope is ignored`, () => {
+		const code = `function a() {return [1];}\nconst b = a();`;
+		const ast = generateFlatAST(code);
+		ast.forEach(n => assert.ok(n.scope.type !== 'module', `Module scope was not ignored`));
+	});
+	it(`Verify the lineage is correct`, () => {
+		const code = `(function() {var a; function b() {var c;}})();`;
+		const ast = generateFlatAST(code);
+		function extractLineage(node) {
+			const lineage = [];
+			let currentNode = node;
+			while (currentNode) {
+				lineage.push(currentNode.scope.scopeId);
+				if (!currentNode.scope.scopeId) break;
+				currentNode = currentNode.parentNode;
+			}
+			return [...new Set(lineage)].reverse();
+		}
+		ast[0].typeMap.Identifier.forEach(n => {
+			const extractedLineage = extractLineage(n);
+			assert.deepEqual(n.lineage, extractedLineage);
+		});
 	});
 });

@@ -33,7 +33,6 @@ import {Scope} from 'eslint-scope';
  * @property {ASTNode} [init]
  * @property {boolean} [isEmpty] True when the node is set for deletion but should be replced with an Empty Statement instead
  * @property {boolean} [isMarked] True when the node has already been marked for replacement or deletion
- * @property {boolean} [isScopeBlock] Marks the node as a scope block to allow iterations to quickly find a surrounding block
  * @property {ASTNode} [key]
  * @property {string} [kind]
  * @property {ASTNode} [label]
@@ -60,6 +59,7 @@ import {Scope} from 'eslint-scope';
  * @property {ASTNode} [regex]
  * @property {ASTNode} [right]
  * @property {ASTScope} [scope]
+ * @property {number} [scopeId] For nodes which are also a scope's block
  * @property {string} [scriptHash]
  * @property {boolean} [shorthand]
  * @property {ASTNode} [source]
