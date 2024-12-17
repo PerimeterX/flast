@@ -15,7 +15,7 @@ describe('Parsing tests', () => {
 		const expectedScopeType = 'function';
 		// ast.slice(-1)[0].type is the last identifier in the code and should have the expected scope type
 		assert.equal(ast.slice(-1)[0].scope.type, expectedScopeType, `Unexpected scope`);
-		assert.equal(testedScope.type, expectedParentScopeType, `Tested scope is not the child of the correct scope`);
+		assert.equal(testedScope.upper.type, expectedParentScopeType, `Tested scope is not the child of the correct scope`);
 	});
 	it('Verify declNode references the local declaration correctly', () => {
 		const innerScopeVal = 'inner';
