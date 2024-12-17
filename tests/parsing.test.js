@@ -73,4 +73,35 @@ describe('Parsing tests', () => {
 		const result = ast[0].typeMap;
 		assert.deepEqual(result, expected);
 	});
+	it(`Verify node relations are parsed correctly`, () => {
+		const code = `for (var i = 0; i < 10; i++);\nfor (var i = 0; i < 10; i++);`;
+		try {
+			generateFlatAST(code);
+		} catch (e) {
+			assert.fail(`Parsing failed: ${e.message}`);
+		}
+	});
+	it(`Verify the module scope is ignored`, () => {
+		const code = `function a() {return [1];}\nconst b = a();`;
+		const ast = generateFlatAST(code);
+		ast.forEach(n => assert.ok(n.scope.type !== 'module', `Module scope was not ignored`));
+	});
+	it(`Verify the lineage is correct`, () => {
+		const code = `(function() {var a; function b() {var c;}})();`;
+		const ast = generateFlatAST(code);
+		function extractLineage(node) {
+			const lineage = [];
+			let currentNode = node;
+			while (currentNode) {
+				lineage.push(currentNode.scope.scopeId);
+				if (!currentNode.scope.scopeId) break;
+				currentNode = currentNode.parentNode;
+			}
+			return [...new Set(lineage)].reverse();
+		}
+		ast[0].typeMap.Identifier.forEach(n => {
+			const extractedLineage = extractLineage(n);
+			assert.deepEqual(n.lineage, extractedLineage);
+		});
+	});
 });
