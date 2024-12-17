@@ -153,15 +153,23 @@ function extractNodesFromRoot(rootNode, opts) {
 		node.nodeId = nodeId++;
 		typeMap[node.type] = typeMap[node.type] || [];
 		typeMap[node.type].push(node);
-		node.lineage = [...node.parentNode?.lineage || []];
-		if (node.parentNode) {
-			node.lineage.push(node.parentNode.start);
+		if (opts.detailed) {
+			node.scope = matchScopeToNode(node, scopes);
+			node.lineage = [...node.parentNode?.lineage || []];
+			if (!node.lineage.includes(node.scope.scopeId)) {
+				node.lineage.push(node.scope.scopeId);
+			}
 		}
 		// Add a getter for the node's source code
 		if (opts.includeSrc && !node.src) Object.defineProperty(node, 'src', {
 			get() {return rootNode.srcClosure(node.start, node.end);},
 		});
-		if (opts.detailed) injectScopeToNode(node, scopes);
+	}
+	if (opts.detailed) {
+		const identifiers = typeMap.Identifier || [];
+		for (let i = 0; i < identifiers.length; i++) {
+			mapIdentifierRelations(identifiers[i]);
+		}
 	}
 	if (allNodes?.length) allNodes[0].typeMap = typeMap;
 	return allNodes;
@@ -169,15 +177,11 @@ function extractNodesFromRoot(rootNode, opts) {
 
 /**
  * @param {ASTNode} node
- * @param {ASTScope[]} scopes
  */
-function injectScopeToNode(node, scopes) {
-	let parentNode = node.parentNode;
-	// Acquire scope
-	node.scope = matchScopeToNode(node, scopes);
-	if (node.type === 'Identifier' && !(!parentNode.computed && ['property', 'key'].includes(node.parentKey))) {
-		// Track references and declarations
-		// Prevent assigning declNode to member expression properties or object keys
+function mapIdentifierRelations(node) {
+	// Track references and declarations
+	// Prevent assigning declNode to member expression properties or object keys
+	if (node.type === 'Identifier' && !(!node.parentNode.computed && ['property', 'key'].includes(node.parentKey))) {
 		const variables = [];
 		for (let i = 0; i < node.scope.variables.length; i++) {
 			if (node.scope.variables[i].name === node.name) variables.push(node.scope.variables[i]);
@@ -194,8 +198,7 @@ function injectScopeToNode(node, scopes) {
 						break;
 					}
 				}
-			}
-			else {
+			} else {
 				for (let i = 0; i < node.scope.references.length; i++) {
 					if (node.scope.references[i].identifier.name === node.name) {
 						decls = node.scope.references[i].resolved?.identifiers || [];
@@ -247,40 +250,55 @@ function getAllScopes(rootNode) {
 		optimistic: true,
 		ecmaVersion: currentYear,
 		sourceType}).acquireAll(rootNode)[0];
+	let scopeId = 0;
 	const allScopes = {};
 	const stack = [globalScope];
 	while (stack.length) {
-		let scope = stack.shift();
-		const scopeId = scope.block.start;
-		scope.block.isScopeBlock = true;
-		allScopes[scopeId] = allScopes[scopeId] || scope;
-		stack.unshift(...scope.childScopes);
-		// A single global scope is enough, so if there are variables in a module scope, add them to the global scope
-		if (scope.type === 'module' && scope.upper === globalScope && scope.variables?.length) {
+		const scope = stack.shift();
+		if (scope.type !== 'module') {
+			scope.scopeId = scopeId++;
+			scope.block.scopeId = scope.scopeId;
+			allScopes[scope.scopeId] = allScopes[scope.scopeId] || scope;
+
+			for (let i = 0; i < scope.variables.length; i++) {
+				const v = scope.variables[i];
+				for (let j = 0; j < v.identifiers.length; j++) {
+					v.identifiers[j].scope = scope;
+					v.identifiers[j].references = [];
+				}
+			}
+		} else if (scope.upper === globalScope && scope.variables?.length) {
+			// A single global scope is enough, so if there are variables in a module scope, add them to the global scope
 			for (let i = 0; i < scope.variables.length; i++) {
 				const v = scope.variables[i];
 				if (!globalScope.variables.includes(v)) globalScope.variables.push(v);
 			}
 		}
+		stack.unshift(...scope.childScopes);
 	}
-	rootNode.allScopes = allScopes;
-	return allScopes;
+	return rootNode.allScopes = allScopes;
 }
 
 /**
  * @param {ASTNode} node
- * @param {ASTScope[]} allScopes
+ * @param {{number: ASTScope}} allScopes
  * @return {ASTScope}
  */
 function matchScopeToNode(node, allScopes) {
-	let scopeBlock = node;
-	while (scopeBlock && !scopeBlock.isScopeBlock) {
-		scopeBlock = scopeBlock.parentNode;
+	let scope = node.scope;
+	if (!scope) {
+		let scopeBlock = node;
+		while (scopeBlock && scopeBlock.scopeId === undefined) {
+			scopeBlock = scopeBlock.parentNode;
+		}
+		if (scopeBlock) {
+			scope = allScopes[scopeBlock.scopeId];
+		}
 	}
-	let scope;
-	if (scopeBlock) {
-		scope = allScopes[scopeBlock.start];
+	if (scope) {
 		if (scope.type.includes('-name') && scope?.childScopes?.length === 1) scope = scope.childScopes[0];
+		if (node === scope.block && scope.upper) scope = scope.upper;
+		if (scope.type === 'module') scope = scope.upper;
 	} else scope = allScopes[0]; // Global scope - this should never be reached
 	return scope;
 }
@@ -290,6 +308,6 @@ export {
 	generateCode,
 	generateFlatAST,
 	generateRootNode,
-	injectScopeToNode,
+	mapIdentifierRelations,
 	parseCode,
 };
