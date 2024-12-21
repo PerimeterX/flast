@@ -134,6 +134,7 @@ function extractNodesFromRoot(rootNode, opts) {
 				if (Array.isArray(content)) {
 					for (let j = 0; j < content.length; j++) {
 						const childNode = content[j];
+						if (!childNode) continue;
 						childNode.parentNode = node;
 						childNode.parentKey = key;
 						childrenLoc[childNode.start] = childNode;
