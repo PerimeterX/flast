@@ -31,7 +31,7 @@
     "espree": "^10.3.0"
   },
   "devDependencies": {
-    "eslint": "^9.16.0",
+    "eslint": "^9.18.0",
     "husky": "^9.1.7"
   }
 }
