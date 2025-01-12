@@ -104,4 +104,9 @@ describe('Parsing tests', () => {
 			assert.deepEqual(n.lineage, extractedLineage);
 		});
 	});
+	it(`Verify null childNodes are correctly parsed`, () => {
+		const code = `[,,,].join('-');`;
+		const ast = generateFlatAST(code);
+		assert.notEqual(ast, [1]);
+	});
 });
