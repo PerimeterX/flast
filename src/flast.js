@@ -120,7 +120,7 @@ function extractNodesFromRoot(rootNode, opts) {
 		const node = stack.shift();
 		if (node.nodeId) continue;
 		node.childNodes = node.childNodes || [];
-		const childrenLoc = {};  // Store the location of child nodes to sort them by order
+		const childrenLoc = {};  								// Store the location of child nodes to sort them by order
 		node.parentKey = node.parentKey || '';	// Make sure parentKey exists
 		// Iterate over all keys of the node to find child nodes
 		const keys = Object.keys(node);
@@ -155,7 +155,7 @@ function extractNodesFromRoot(rootNode, opts) {
 		typeMap[node.type] = typeMap[node.type] || [];
 		typeMap[node.type].push(node);
 		if (opts.detailed) {
-			node.scope = matchScopeToNode(node, scopes);
+			node.scope = scopes[node.scopeId] || node.parentNode?.scope;
 			node.lineage = [...node.parentNode?.lineage || []];
 			if (!node.lineage.includes(node.scope.scopeId)) {
 				node.lineage.push(node.scope.scopeId);
@@ -256,7 +256,7 @@ function getAllScopes(rootNode) {
 	const stack = [globalScope];
 	while (stack.length) {
 		const scope = stack.shift();
-		if (scope.type !== 'module') {
+		if (scope.type !== 'module' && !scope.type.includes('-name')) {
 			scope.scopeId = scopeId++;
 			scope.block.scopeId = scope.scopeId;
 			allScopes[scope.scopeId] = allScopes[scope.scopeId] || scope;
@@ -278,30 +278,6 @@ function getAllScopes(rootNode) {
 		stack.unshift(...scope.childScopes);
 	}
 	return rootNode.allScopes = allScopes;
-}
-
-/**
- * @param {ASTNode} node
- * @param {{number: ASTScope}} allScopes
- * @return {ASTScope}
- */
-function matchScopeToNode(node, allScopes) {
-	let scope = node.scope;
-	if (!scope) {
-		let scopeBlock = node;
-		while (scopeBlock && scopeBlock.scopeId === undefined) {
-			scopeBlock = scopeBlock.parentNode;
-		}
-		if (scopeBlock) {
-			scope = allScopes[scopeBlock.scopeId];
-		}
-	}
-	if (scope) {
-		if (scope.type.includes('-name') && scope?.childScopes?.length === 1) scope = scope.childScopes[0];
-		if (node === scope.block && scope.upper) scope = scope.upper;
-		if (scope.type === 'module') scope = scope.upper;
-	} else scope = allScopes[0]; // Global scope - this should never be reached
-	return scope;
 }
 
 export {
