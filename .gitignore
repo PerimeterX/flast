@@ -1,4 +1,7 @@
+.vscode/
+.cursor
 node_modules/
 .idea/
 *tmp*/
 *tmp*.*
+.DS_Store
