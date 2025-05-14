@@ -184,11 +184,13 @@ function extractNodesFromRoot(rootNode, opts) {
 		}
 	}
 	if (allNodes?.length) {
-		allNodes[0].typeMap = typeMap;
-		// Add a getType getter for typeMap that defaults to []
-		Object.defineProperty(allNodes[0], 'getType', {
-			value: function(type) { return this.typeMap[type] || []; },
-			enumerable: false
+		allNodes[0].typeMap = new Proxy(typeMap, {
+			get(target, prop, receiver) {
+				if (prop in target) {
+					return Reflect.get(target, prop, receiver);
+				}
+				return [];	// Return an empty array for any undefined type
+			},
 		});
 	}
 	return allNodes;
