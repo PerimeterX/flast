@@ -231,5 +231,13 @@ console.log(result); // var a = b; var b = 42; console.log(b);
 
 ---
 
+## Best Practices
+
+### AST Mutability
+You can directly mutate nodes in the flat AST (e.g., changing properties, adding or removing nodes). However, for safety and script validity, it's best to use the Arborist for all structural changes. The Arborist verifies your changes and prevents breaking the code, ensuring that the resulting AST remains valid and that all node information is updated correctly.
+
+- **Direct mutation is possible**, but should be used with caution.
+- **Recommended:** Use the Arborist's `markNode` method for all node deletions and replacements.
+
 ## How to Contribute
 To contribute to this project see our [contribution guide](CONTRIBUTING.md)
