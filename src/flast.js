@@ -29,7 +29,7 @@ const generateFlatASTDefaultOptions = {
 	// If false, do not include node src
 	includeSrc: true,
 	// Retry to parse the code with sourceType: 'script' if 'module' failed with 'strict' error message
-	alernateSourceTypeOnFailure: true,
+	alternateSourceTypeOnFailure: true,
 	// Options for the espree parser
 	parseOpts: {
 		sourceType,
@@ -98,8 +98,8 @@ function generateRootNode(inputCode, opts = {}) {
 		rootNode = parseCode(inputCode, parseOpts);
 		if (opts.includeSrc) rootNode.srcClosure = createSrcClosure(inputCode);
 	} catch (e) {
-		// If any parse error occurs and alernateSourceTypeOnFailure is set, try 'script' mode
-		if (opts.alernateSourceTypeOnFailure) {
+		// If any parse error occurs and alternateSourceTypeOnFailure is set, try 'script' mode
+		if (opts.alternateSourceTypeOnFailure) {
 			try {
 				rootNode = parseCode(inputCode, {...parseOpts, sourceType: 'script'});
 				if (opts.includeSrc) rootNode.srcClosure = createSrcClosure(inputCode);
