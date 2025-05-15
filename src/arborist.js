@@ -1,9 +1,13 @@
 import {logger} from './utils/logger.js';
 import {generateCode, generateFlatAST} from './flast.js';
 
-const Arborist = class {
+/**
+ * Arborist allows marking nodes for deletion or replacement, and then applying all changes in a single pass.
+ * Note: Marking a node with markNode() only sets a flag; the AST is not officially changed until applyChanges() is called.
+ */
+class Arborist {
 	/**
-	 * @param {string|ASTNode[]} scriptOrFlatAstArr - the target script or a flat AST array
+	 * @param {string|ASTNode[]} scriptOrFlatAstArr - The target script or a flat AST array.
 	 */
 	constructor(scriptOrFlatAstArr) {
 		this.script                = '';
@@ -46,10 +50,9 @@ const Arborist = class {
 	}
 
 	/**
-	 * Replace the target node with another node or delete the target node completely, depending on whether a replacement
-	 * node is provided.
+	 * Mark a node for replacement or deletion. This only sets a flag; the AST is not changed until applyChanges() is called.
 	 * @param {ASTNode} targetNode The node to replace or remove.
-	 * @param {object|ASTNode} replacementNode If exists, replace the target node with this node.
+	 * @param {object|ASTNode} [replacementNode] If exists, replace the target node with this node.
 	 */
 	markNode(targetNode, replacementNode) {
 		if (!targetNode.isMarked) {
@@ -68,27 +71,47 @@ const Arborist = class {
 	}
 
 	/**
+	 * Merge comments from a source node into a target node or array.
+	 * @param {ASTNode|Object} target - The node or array element to receive comments.
+	 * @param {ASTNode} source - The node whose comments should be merged.
+	 * @param {'leadingComments'|'trailingComments'} which
+	 */
+	static mergeComments(target, source, which) {
+		if (!source[which] || !source[which].length) return;
+		if (!target[which]) {
+			target[which] = [...source[which]];
+		} else if (target[which] !== source[which]) {
+			target[which] = target[which].concat(source[which]);
+		}
+	}
+
+	/**
 	 * Iterate over the complete AST and replace / remove marked nodes,
 	 * then rebuild code and AST to validate changes.
+	 *
+	 * Note: If you delete a node that is the only child of its parent (e.g., the only statement in a block),
+	 * you may leave the parent in an invalid or empty state. Consider cleaning up empty parents if needed.
+	 *
 	 * @return {number} The number of modifications made.
 	 */
 	applyChanges() {
 		let changesCounter = 0;
+		let rootNode = this.ast[0];
 		try {
 			if (this.getNumberOfChanges() > 0) {
-				let rootNode = this.ast[0];
 				if (rootNode.isMarked) {
 					const rootNodeReplacement = this.replacements.find(n => n[0].nodeId === 0);
 					++changesCounter;
 					this.logger.debug(`[+] Applying changes to the root node...`);
-					const leadingComments =  rootNode.leadingComments || [];
+					const leadingComments = rootNode.leadingComments || [];
 					const trailingComments = rootNode.trailingComments || [];
 					rootNode = rootNodeReplacement[1];
-					if (leadingComments.length && rootNode.leadingComments !== leadingComments) rootNode.leadingComments = (rootNode.leadingComments || []).concat(leadingComments);
-					if (trailingComments.length && rootNode.trailingComments !== trailingComments) rootNode.trailingComments = (rootNode.trailingComments || []).concat(trailingComments);
+					if (leadingComments.length && rootNode.leadingComments !== leadingComments)
+						Arborist.mergeComments(rootNode, {leadingComments}, 'leadingComments');
+					if (trailingComments.length && rootNode.trailingComments !== trailingComments)
+						Arborist.mergeComments(rootNode, {trailingComments}, 'trailingComments');
 				} else {
-					for (let i = 0; i < this.markedForDeletion.length; i++) {
-						const targetNodeId = this.markedForDeletion[i];
+					for (const targetNodeId of this.markedForDeletion) {
 						try {
 							let targetNode = this.ast[targetNodeId];
 							targetNode = targetNode.nodeId === targetNodeId ? targetNode : this.ast.find(n => n.nodeId === targetNodeId);
@@ -96,47 +119,54 @@ const Arborist = class {
 								const parent = targetNode.parentNode;
 								if (parent[targetNode.parentKey] === targetNode) {
 									delete parent[targetNode.parentKey];
-									const comments = (targetNode.leadingComments || []).concat(targetNode.trailingComments || []);
-									if (comments.length) parent.trailingComments = (parent.trailingComments || []).concat(comments);
+									Arborist.mergeComments(parent, targetNode, 'trailingComments');
 									++changesCounter;
 								} else if (Array.isArray(parent[targetNode.parentKey])) {
 									const idx = parent[targetNode.parentKey].indexOf(targetNode);
-									parent[targetNode.parentKey].splice(idx, 1);
-									const comments = (targetNode.leadingComments || []).concat(targetNode.trailingComments || []);
-									if (comments.length) {
-										const targetParent = idx > 0 ? parent[targetNode.parentKey][idx - 1] : parent[targetNode.parentKey].length > 1 ? parent[targetNode.parentKey][idx + 1] : parent;
-										targetParent.trailingComments = (targetParent.trailingComments || []).concat(comments);
+									if (idx !== -1) {
+										parent[targetNode.parentKey].splice(idx, 1);
+										const comments = (targetNode.leadingComments || []).concat(targetNode.trailingComments || []);
+										let targetParent = null;
+										if (parent[targetNode.parentKey].length > 0) {
+											if (idx > 0) {
+												targetParent = parent[targetNode.parentKey][idx - 1];
+												Arborist.mergeComments(targetParent, {trailingComments: comments}, 'trailingComments');
+											} else {
+												targetParent = parent[targetNode.parentKey][0];
+												Arborist.mergeComments(targetParent, {leadingComments: comments}, 'leadingComments');
+											}
+										} else {
+											this.logger.debug(`[!] Deleted last element from array '${targetNode.parentKey}' in parent node type '${parent.type}'. Array is now empty.`);
+											Arborist.mergeComments(parent, {trailingComments: comments}, 'trailingComments');
+										}
+										++changesCounter;
 									}
-									++changesCounter;
 								}
 							}
 						} catch (e) {
 							this.logger.debug(`[-] Unable to delete node: ${e}`);
 						}
 					}
-					for (let i = 0; i < this.replacements.length; i++) {
-						const [targetNode, replacementNode] = this.replacements[i];
+					for (const [targetNode, replacementNode] of this.replacements) {
 						try {
 							if (targetNode) {
 								const parent = targetNode.parentNode;
 								if (parent[targetNode.parentKey] === targetNode) {
 									parent[targetNode.parentKey] = replacementNode;
-									const leadingComments =  targetNode.leadingComments || [];
-									const trailingComments = targetNode.trailingComments || [];
-									if (leadingComments.length) replacementNode.leadingComments = (replacementNode.leadingComments || []).concat(leadingComments);
-									if (trailingComments.length) replacementNode.trailingComments = (replacementNode.trailingComments || []).concat(trailingComments);
+									Arborist.mergeComments(replacementNode, targetNode, 'leadingComments');
+									Arborist.mergeComments(replacementNode, targetNode, 'trailingComments');
 									++changesCounter;
 								} else if (Array.isArray(parent[targetNode.parentKey])) {
 									const idx = parent[targetNode.parentKey].indexOf(targetNode);
 									parent[targetNode.parentKey][idx] = replacementNode;
 									const comments = (targetNode.leadingComments || []).concat(targetNode.trailingComments || []);
 									if (idx > 0) {
-										const commentsTarget = parent[targetNode.parentKey][idx - 1];
-										commentsTarget.trailingComments = (commentsTarget.trailingComments || []).concat(comments);
+										Arborist.mergeComments(parent[targetNode.parentKey][idx - 1], {trailingComments: comments}, 'trailingComments');
 									} else if (parent[targetNode.parentKey].length > 1) {
-										const commentsTarget = parent[targetNode.parentKey][idx + 1];
-										commentsTarget.leadingComments = (commentsTarget.leadingComments || []).concat(comments);
-									} else parent.trailingComments = (parent.trailingComments || []).concat(comments);
+										Arborist.mergeComments(parent[targetNode.parentKey][idx + 1], {leadingComments: comments}, 'leadingComments');
+									} else {
+										Arborist.mergeComments(parent, {trailingComments: comments}, 'trailingComments');
+									}
 									++changesCounter;
 								}
 							}
@@ -145,21 +175,21 @@ const Arborist = class {
 						}
 					}
 				}
-				if (changesCounter) {
-					this.replacements.length = 0;
-					this.markedForDeletion.length = 0;
-					// If any of the changes made will break the script the next line will fail and the
-					// script will remain the same. If it doesn't break, the changes are valid and the script can be marked as modified.
-					const script = generateCode(rootNode);
-					const ast = generateFlatAST(script);
-					if (ast && ast.length) {
-						this.ast = ast;
-						this.script = script;
-					}
-					else {
-						this.logger.log(`[-] Modified script is invalid. Reverting ${changesCounter} changes...`);
-						changesCounter = 0;
-					}
+			}
+			if (changesCounter) {
+				this.replacements.length = 0;
+				this.markedForDeletion.length = 0;
+				// If any of the changes made will break the script the next line will fail and the
+				// script will remain the same. If it doesn't break, the changes are valid and the script can be marked as modified.
+				const script = generateCode(rootNode);
+				const ast = generateFlatAST(script);
+				if (ast && ast.length) {
+					this.ast = ast;
+					this.script = script;
+				}
+				else {
+					this.logger.log(`[-] Modified script is invalid. Reverting ${changesCounter} changes...`);
+					changesCounter = 0;
 				}
 			}
 		} catch (e) {
@@ -168,7 +198,7 @@ const Arborist = class {
 		++this.appliedCounter;
 		return changesCounter;
 	}
-};
+}
 
 export {
 	Arborist,

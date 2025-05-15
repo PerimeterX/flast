@@ -104,12 +104,12 @@ describe('Functionality tests', () => {
 		let unparsedError = '';
 		let parsedError = '';
 		try {
-			unparsedAst = generateFlatAST(code, {alernateSourceTypeOnFailure: false});
+			unparsedAst = generateFlatAST(code, {alternateSourceTypeOnFailure: false});
 		} catch (e) {
 			unparsedError = e.message;
 		}
 		try {
-			parsedAst = generateFlatAST(code, {alernateSourceTypeOnFailure: true});
+			parsedAst = generateFlatAST(code, {alternateSourceTypeOnFailure: true});
 		} catch (e) {
 			parsedError = e.message;
 		}
@@ -121,7 +121,7 @@ describe('Functionality tests', () => {
 		let result;
 		const expectedResult = [];
 		try {
-			result = generateFlatAST(code, {alernateSourceTypeOnFailure: false});
+			result = generateFlatAST(code, {alternateSourceTypeOnFailure: false});
 		} catch (e) {
 			result = e.message;
 		}

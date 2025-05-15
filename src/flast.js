@@ -29,7 +29,7 @@ const generateFlatASTDefaultOptions = {
 	// If false, do not include node src
 	includeSrc: true,
 	// Retry to parse the code with sourceType: 'script' if 'module' failed with 'strict' error message
-	alernateSourceTypeOnFailure: true,
+	alternateSourceTypeOnFailure: true,
 	// Options for the espree parser
 	parseOpts: {
 		sourceType,
@@ -78,6 +78,7 @@ const generateCodeDefaultOptions = {
 /**
  * @param {ASTNode} rootNode
  * @param {object} opts Optional changes to behavior. See generateCodeDefaultOptions for available options.
+*        								All escodegen options are supported, including sourceMap, sourceMapWithCode, etc.
  * @return {string} Code generated from AST
  */
 function generateCode(rootNode, opts = {}) {
@@ -97,8 +98,17 @@ function generateRootNode(inputCode, opts = {}) {
 		rootNode = parseCode(inputCode, parseOpts);
 		if (opts.includeSrc) rootNode.srcClosure = createSrcClosure(inputCode);
 	} catch (e) {
-		if (opts.alernateSourceTypeOnFailure && e.message.includes('in strict mode')) rootNode = parseCode(inputCode, {...parseOpts, sourceType: 'script'});
-		else logger.debug(e);
+		// If any parse error occurs and alternateSourceTypeOnFailure is set, try 'script' mode
+		if (opts.alternateSourceTypeOnFailure) {
+			try {
+				rootNode = parseCode(inputCode, {...parseOpts, sourceType: 'script'});
+				if (opts.includeSrc) rootNode.srcClosure = createSrcClosure(inputCode);
+			} catch (e2) {
+				logger.debug('Failed to parse as module and script:', e, e2);
+			}
+		} else {
+			logger.debug(e);
+		}
 	}
 	return rootNode;
 }
@@ -168,41 +178,65 @@ function extractNodesFromRoot(rootNode, opts) {
 	}
 	if (opts.detailed) {
 		const identifiers = typeMap.Identifier || [];
+		const scopeVarMaps = buildScopeVarMaps(scopes);
 		for (let i = 0; i < identifiers.length; i++) {
-			mapIdentifierRelations(identifiers[i]);
+			mapIdentifierRelations(identifiers[i], scopeVarMaps);
 		}
 	}
-	if (allNodes?.length) allNodes[0].typeMap = typeMap;
+	if (allNodes?.length) {
+		allNodes[0].typeMap = new Proxy(typeMap, {
+			get(target, prop, receiver) {
+				if (prop in target) {
+					return Reflect.get(target, prop, receiver);
+				}
+				return [];	// Return an empty array for any undefined type
+			},
+		});
+	}
 	return allNodes;
 }
 
 /**
- * @param {ASTNode} node
+ * Precompute a map of variable names to declarations for each scope for fast lookup.
+ * @param {object} scopes
+ * @return {Map} Map of scopeId to { [name]: variable }
  */
-function mapIdentifierRelations(node) {
+function buildScopeVarMaps(scopes) {
+	const scopeVarMaps = {};
+	for (const scopeId in scopes) {
+		const scope = scopes[scopeId];
+		const varMap = {};
+		for (let i = 0; i < scope.variables.length; i++) {
+			const v = scope.variables[i];
+			varMap[v.name] = v;
+		}
+		scopeVarMaps[scopeId] = varMap;
+	}
+	return scopeVarMaps;
+}
+
+/**
+ * @param {ASTNode} node
+ * @param {object} scopeVarMaps
+ */
+function mapIdentifierRelations(node, scopeVarMaps) {
 	// Track references and declarations
 	// Prevent assigning declNode to member expression properties or object keys
 	if (node.type === 'Identifier' && !(!node.parentNode.computed && ['property', 'key'].includes(node.parentKey))) {
-		const variables = [];
-		for (let i = 0; i < node.scope.variables.length; i++) {
-			if (node.scope.variables[i].name === node.name) variables.push(node.scope.variables[i]);
-		}
-		if (node.parentKey === 'id' || variables?.[0]?.identifiers?.includes(node)) {
+		const scope = node.scope;
+		const varMap = scope && scopeVarMaps ? scopeVarMaps[scope.scopeId] : undefined;
+		const variable = varMap ? varMap[node.name] : undefined;
+		if (node.parentKey === 'id' || variable?.identifiers?.includes(node)) {
 			node.references = node.references || [];
 		} else {
 			// Find declaration by finding the closest declaration of the same name.
 			let decls = [];
-			if (variables?.length) {
-				for (let i = 0; i < variables.length; i++) {
-					if (variables[i].name === node.name) {
-						decls = variables[i].identifiers || [];
-						break;
-					}
-				}
-			} else {
-				for (let i = 0; i < node.scope.references.length; i++) {
-					if (node.scope.references[i].identifier.name === node.name) {
-						decls = node.scope.references[i].resolved?.identifiers || [];
+			if (variable) {
+				decls = variable.identifiers || [];
+			} else if (scope && scope.references) {
+				for (let i = 0; i < scope.references.length; i++) {
+					if (scope.references[i].identifier.name === node.name) {
+						decls = scope.references[i].resolved?.identifiers || [];
 						break;
 					}
 				}

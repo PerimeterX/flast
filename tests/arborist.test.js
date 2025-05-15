@@ -157,3 +157,86 @@ const c = 3;`;
 		assert.equal(arb.script, expected);
 	});
 });
+
+describe('Arborist edge case tests', () => {
+	it('Preserves comments when replacing a non-root node', () => {
+		const code = `const a = 1; // trailing\nconst b = 2;`;
+		const expected = `const a = 1;\n// trailing\nconst b = 3;`;
+		const arb = new Arborist(code);
+		const bDecl = arb.ast.find(n => n.type === 'VariableDeclarator' && n.id.name === 'b');
+		arb.markNode(bDecl.init, {type: 'Literal', value: 3, raw: '3'});
+		arb.applyChanges();
+		assert.equal(arb.script, expected);
+	});
+
+	it('Deleting the only element in an array leaves parent valid', () => {
+		const code = `const a = [42];`;
+		const expected = `const a = [];`;
+		const arb = new Arborist(code);
+		const literal = arb.ast.find(n => n.type === 'Literal');
+		arb.markNode(literal);
+		arb.applyChanges();
+		assert.equal(arb.script, expected);
+	});
+
+	it('Multiple changes in a single pass (replace and delete siblings)', () => {
+		const code = `let a = 1, b = 2, c = 3;`;
+		const expected = `let a = 10, c = 3;`;
+		const arb = new Arborist(code);
+		const bDecl = arb.ast.find(n => n.type === 'VariableDeclarator' && n.id.name === 'b');
+		const aDecl = arb.ast.find(n => n.type === 'VariableDeclarator' && n.id.name === 'a');
+		arb.markNode(bDecl); // delete b
+		arb.markNode(aDecl.init, {type: 'Literal', value: 10, raw: '10'}); // replace a's value
+		arb.applyChanges();
+		assert.equal(arb.script, expected);
+	});
+
+	it('Deeply nested node replacement', () => {
+		const code = `if (a) { if (b) { c(); } }`;
+		const expected = `if (a) {
+  if (b) {
+    d();
+  }
+}`;
+		const arb = new Arborist(code);
+		const cCall = arb.ast.find(n => n.type === 'Identifier' && n.name === 'c');
+		arb.markNode(cCall, {type: 'Identifier', name: 'd'});
+		arb.applyChanges();
+		assert.equal(arb.script, expected);
+	});
+
+	it('Multiple comments on a node being deleted', () => {
+		const code = `// lead1\n// lead2\nconst a = 1; // trail1\n// trail2\nconst b = 2;`;
+		const expected = `// lead1\n// lead2\nconst a = 1;  // trail1\n              // trail2`;
+		const arb = new Arborist(code);
+		const bDecl = arb.ast.find(n => n.type === 'VariableDeclaration' && n.declarations[0].id.name === 'b');
+		arb.markNode(bDecl);
+		arb.applyChanges();
+		assert.equal(arb.script.trim(), expected.trim());
+	});
+
+	it('Marking the same node for deletion and replacement only applies one change', () => {
+		const code = `let x = 1;`;
+		const expected = `let x = 2;`;
+		const arb = new Arborist(code);
+		const literal = arb.ast.find(n => n.type === 'Literal');
+		arb.markNode(literal, {type: 'Literal', value: 2, raw: '2'});
+		arb.markNode(literal); // Should not delete after replacement
+		arb.applyChanges();
+		assert.equal(arb.script, expected);
+	});
+
+	it('AST is still valid and mutable after applyChanges', () => {
+		const code = `let y = 5;`;
+		const arb = new Arborist(code);
+		const literal = arb.ast.find(n => n.type === 'Literal');
+		arb.markNode(literal, {type: 'Literal', value: 10, raw: '10'});
+		arb.applyChanges();
+		assert.equal(arb.script, 'let y = 10;'); // Validate the change was applied
+		// Now change again
+		const newLiteral = arb.ast.find(n => n.type === 'Literal');
+		arb.markNode(newLiteral, {type: 'Literal', value: 20, raw: '20'});
+		arb.applyChanges();
+		assert.equal(arb.script, 'let y = 20;');
+	});
+});
