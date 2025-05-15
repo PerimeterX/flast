@@ -27,11 +27,11 @@
   "homepage": "https://github.com/PerimeterX/flast#readme",
   "dependencies": {
     "escodegen": "npm:@javascript-obfuscator/escodegen",
-    "eslint-scope": "^8.2.0",
+    "eslint-scope": "^8.3.0",
     "espree": "^10.3.0"
   },
   "devDependencies": {
-    "eslint": "^9.18.0",
+    "eslint": "^9.26.0",
     "husky": "^9.1.7"
   }
 }
