@@ -1,6 +1,6 @@
 {
   "name": "flast",
-  "version": "2.2.4",
+  "version": "2.2.5",
   "description": "Flatten JS AST",
   "main": "src/index.js",
   "type": "module",
