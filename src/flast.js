@@ -233,10 +233,11 @@ function mapIdentifierRelations(node, scopeVarMaps) {
 			let decls = [];
 			if (variable) {
 				decls = variable.identifiers || [];
-			} else if (scope && scope.references) {
-				for (let i = 0; i < scope.references.length; i++) {
-					if (scope.references[i].identifier.name === node.name) {
-						decls = scope.references[i].resolved?.identifiers || [];
+			} else if (scope && (scope.references.length || scope.variableScope?.references.length)) {
+				const references = scope.references?.length ? scope.references : scope.variableScope.references;
+				for (let i = 0; i < references.length; i++) {
+					if (references[i].identifier.name === node.name) {
+						decls = references[i].resolved?.identifiers || [];
 						break;
 					}
 				}
