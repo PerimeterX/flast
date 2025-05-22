@@ -110,7 +110,7 @@ describe('Parsing tests', () => {
 		assert.notEqual(ast, [1]);
 	});
 	it(`Verify all identifiers are referenced correctly`, () => {
-		const code = `let a = 1; switch(a) {}`;
+		const code = `let a = 1; switch(a) {case 1: a;}`;
 		const ast = generateFlatAST(code);
 		ast.filter(n => n.type === 'Identifier').forEach(n => {
 			assert.ok(n.references?.length || n.declNode, `Identifier '${n.name}' (#${n.nodeId}) is not referenced`);

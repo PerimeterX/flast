@@ -234,7 +234,7 @@ function mapIdentifierRelations(node, scopeVarMaps) {
 			if (variable) {
 				decls = variable.identifiers || [];
 			} else if (scope && (scope.references.length || scope.variableScope?.references.length)) {
-				const references = scope.references?.length ? scope.references : scope.variableScope.references;
+				const references = [...(scope.references || []), ...(scope.variableScope?.references || [])];
 				for (let i = 0; i < references.length; i++) {
 					if (references[i].identifier.name === node.name) {
 						decls = references[i].resolved?.identifiers || [];
